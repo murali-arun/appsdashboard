@@ -1,0 +1,95 @@
+# Nginx Configuration for VPS Deployment Template
+# Copy this to /etc/nginx/sites-available/your-app-name
+# Then create a symlink: sudo ln -s /etc/nginx/sites-available/your-app-name /etc/nginx/sites-enabled/
+
+server {
+    listen 80;
+    listen [::]:80;
+    
+    # Replace with your domain or server IP
+    server_name example.com www.example.com;
+    
+    # Root directory - UPDATE THIS PATH to match VPS_TARGET_PATH
+    root /var/www/your-app;
+    
+    # Index files
+    index index.html index.htm;
+    
+    # Logging
+    access_log /var/log/nginx/your-app-access.log;
+    error_log /var/log/nginx/your-app-error.log;
+    
+    # Gzip compression
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml+rss application/json application/javascript;
+    
+    # Main location block
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+    
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "no-referrer-when-downgrade" always;
+    
+    # Cache static assets
+    location ~* \.(jpg|jpeg|png|gif|ico|svg|webp)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+    
+    location ~* \.(css|js|woff|woff2|ttf|eot)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+    
+    # Deny access to hidden files
+    location ~ /\. {
+        deny all;
+        access_log off;
+        log_not_found off;
+    }
+}
+
+# SSL configuration (uncomment after setting up Let's Encrypt)
+# Run: sudo certbot --nginx -d example.com -d www.example.com
+#
+# server {
+#     listen 443 ssl http2;
+#     listen [::]:443 ssl http2;
+#     
+#     server_name example.com www.example.com;
+#     
+#     ssl_certificate /etc/letsencrypt/live/example.com/fullchain.pem;
+#     ssl_certificate_key /etc/letsencrypt/live/example.com/privkey.pem;
+#     
+#     ssl_protocols TLSv1.2 TLSv1.3;
+#     ssl_ciphers HIGH:!aNULL:!MD5;
+#     ssl_prefer_server_ciphers on;
+#     
+#     root /var/www/your-app;
+#     index index.html index.htm;
+#     
+#     gzip on;
+#     gzip_vary on;
+#     gzip_min_length 1024;
+#     gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml+rss application/json application/javascript;
+#     
+#     location / {
+#         try_files $uri $uri/ /index.html;
+#     }
+#     
+#     location ~* \.(jpg|jpeg|png|gif|ico|svg|webp)$ {
+#         expires 1y;
+#         add_header Cache-Control "public, immutable";
+#     }
+#     
+#     location ~* \.(css|js|woff|woff2|ttf|eot)$ {
+#         expires 1y;
+#         add_header Cache-Control "public, immutable";
+#     }
+# }

@@ -1,0 +1,17 @@
+{
+  "name": "base-template-arun",
+  "version": "1.0.0",
+  "description": "Base web app template with Vite and deployment configuration",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "keywords": ["vite", "deployment", "vps"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "vite": "^5.0.0"
+  }
+}

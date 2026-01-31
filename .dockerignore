@@ -1,0 +1,11 @@
+node_modules
+.git
+.github
+*.md
+.gitignore
+.env
+.env.local
+src
+vite.config.js
+package.json
+package-lock.json

@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  template-static:
+    image: nginx:alpine
+    container_name: base-template-arun
+    ports:
+      - "8080:80"
+    volumes:
+      - ./dist:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    restart: unless-stopped
+    networks:
+      - web
+
+networks:
+  web:
+    driver: bridge
