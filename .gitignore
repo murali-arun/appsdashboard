@@ -33,3 +33,4 @@ temp/
 # Cache
 .cache/
 .parcel-cache/
+sshkey
