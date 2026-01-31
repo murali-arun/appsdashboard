@@ -6,82 +6,325 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  display: flex;
-  justify-content: center;
-  align-items: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: #000;
+  color: #e0e0e0;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* Stars layer */
+.stars {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: 
+    radial-gradient(3px 3px at 10% 20%, rgba(0, 255, 255, 0.9), transparent),
+    radial-gradient(2px 2px at 30% 60%, white, transparent),
+    radial-gradient(2px 2px at 50% 30%, rgba(255, 105, 180, 0.8), transparent),
+    radial-gradient(3px 3px at 70% 80%, rgba(0, 255, 255, 0.7), transparent),
+    radial-gradient(2px 2px at 85% 40%, white, transparent),
+    radial-gradient(2px 2px at 20% 90%, rgba(255, 105, 180, 0.9), transparent),
+    radial-gradient(1px 1px at 95% 10%, white, transparent),
+    radial-gradient(3px 3px at 40% 50%, rgba(0, 255, 200, 0.8), transparent),
+    radial-gradient(2px 2px at 60% 15%, rgba(255, 105, 180, 0.7), transparent),
+    radial-gradient(2px 2px at 15% 45%, white, transparent),
+    radial-gradient(1px 1px at 75% 25%, rgba(0, 255, 255, 0.6), transparent),
+    radial-gradient(2px 2px at 25% 75%, white, transparent),
+    radial-gradient(1px 1px at 5% 35%, rgba(255, 105, 180, 0.8), transparent),
+    radial-gradient(2px 2px at 55% 85%, rgba(0, 255, 200, 0.7), transparent),
+    radial-gradient(1px 1px at 90% 55%, white, transparent),
+    radial-gradient(2px 2px at 45% 5%, rgba(255, 105, 180, 0.6), transparent),
+    radial-gradient(1px 1px at 35% 40%, rgba(0, 255, 255, 0.8), transparent),
+    radial-gradient(2px 2px at 65% 70%, white, transparent),
+    radial-gradient(1px 1px at 80% 90%, rgba(255, 105, 180, 0.7), transparent),
+    radial-gradient(2px 2px at 12% 65%, rgba(0, 255, 200, 0.8), transparent);
+  animation: twinkle 8s ease-in-out infinite;
+  z-index: 5;
+  pointer-events: none;
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Deep space background gradient */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #0a0015 0%, #1a0830 30%, #0f1b2e 60%, #0a0520 100%);
+  z-index: 0;
+}
+
+/* Flowing 3D grid - represents time flowing */
+body::after {
+  content: '';
+  position: fixed;
+  bottom: -50%;
+  left: -10%;
+  width: 120%;
+  height: 120%;
+  background-image: 
+    repeating-linear-gradient(
+      90deg,5px,
+      rgba(102, 126, 234, 0.5) 45px,
+      rgba(102, 126, 234, 0.5) 48px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 45px,
+      rgba(118, 75, 162, 0.5) 45px,
+      rgba(118, 75, 162, 0.5) 48px
+    );
+  transform: perspective(600px) rotateX(70deg);
+  transform-origin: center bottom;
+  animation: timeFlow 20s linear infinite;
+  z-index: 5;
+  pointer-events: none;
+  pointer-events: none;
+  opacity: 1;
+}
+
+@keyframes timeFlow {
+  0% {
+    background-position: 0 0, 0 0;
+  }
+  100% {
+    background-position: 200px 0, 0 200px;
+  }
 }
 
 #app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 10;
+}
+
+/* Clock - Minimal Design */
+.clock {
+  position: fixed;
+  top: 1.5rem;
+  right: 1.5rem;
+  z-index: 100;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+}
+
+#time {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 400;
+  letter-spacing: 0.05em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Header */
+.header {
+  text-align: center;
+  padding: 4rem 2rem 2.5rem;
+  animation: fadeIn 0.8s ease-out;
+}
+
+.header h1 {
+  font-size: 2.5rem;
+  font-weight: 400;
+  color: #ffffff;
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.01em;
+}
+
+.tagline {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  margin-bottom: 0.75rem;
+}
+
+.current-date {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.4);
+  font-weight: 300;
+  letter-spacing: 0.01em;
+  margin-bottom: 1rem;
+}
+
+.social-links {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0.5rem;
+}
+
+.separator {
+  color: rgba(255, 255, 255, 0.2);
+  font-size: 1rem;
+  user-select: none;
+}
+
+.social-link {
+  color: rgba(255, 255, 255, 0.3);
+  transition: color 0.2s ease, transform 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.social-link:hover {
+  color: rgba(255, 255, 255, 0.7);
+  transform: translateY(-2px);
+}
+
+/* Main Container */
+.container {
+  flex: 1;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+/* Apps Grid */
+.apps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 2rem;
+  animation: fadeIn 1s ease-out;
+  perspective: 1000px;
+}
+
+/* App Card */
+.app-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 2.5rem 2rem;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+  transform-style: preserve-3d;
+  transform: translateZ(0);
+}
+0, 255, 255, 0.15) 0%, rgba(255, 105, 180, 0.15
+.app-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.app-card::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;0, 255, 255, 0.6);
+  box-shadow: 
+    0 30px 60px rgba(0, 255, 255, 0.3),
+    0 0 40px rgba(255, 105, 180, 0.2),
+    inset 0 0 20px rgba(0, 255, 255
+
+.app-card:hover {
+  transform: translateZ(50px) rotateX(5deg) rotateY(5deg);
+  border-color: rgba(102, 126, 234, 0.8);
+  box-shadow: 
+    0 30px 60px rgba(102, 126, 234, 0.3),
+    0 0 40px rgba(102, 126, 234, 0.2),
+    inset 0 0 20px rgba(102, 126, 234, 0.1);
+}
+
+.app-card:hover::before {
+  opacity: 1;
+}
+
+.app-card:hover::after {
+  opacity: 1;
+  animation: glow 2s ease-in-out infinite;
+}
+
+.app-card:hover .app-description {
+  opacity: 1;
+  max-height: 100px;
+}
+
+/* Footer */
+.footer {
+  width: 100%;
+  padding: 3rem 2rem 2rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.copyright {
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 0.875rem;
+  margin: 0;
+  font-weight: 300;
+}
+
+.app-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.75rem;
+  position: relative;
+  z-index: 1;
+}
+
+.app-name {
+  font-size: 1.25rem;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  color: #ffffff;
+  position: relative;
+  z-index: 1;
+}
+
+.app-description {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.6);
+  opacity: 0;
+  max-height: 0;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 1;
+}
+
+/* Footer */
+.footer {
   text-align: center;
   padding: 2rem;
-  max-width: 800px;
-  width: 100%;
-}
-
-h1 {
-  font-size: 3rem;
-  margin-bottom: 1rem;
-  animation: fadeIn 1s ease-in;
-}
-
-p {
-  font-size: 1.2rem;
-  opacity: 0.9;
-  animation: fadeIn 1.5s ease-in;
-  margin-bottom: 1rem;
-}
-
-.info {
-  margin-top: 2rem;
-  padding: 1.5rem;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
-  backdrop-filter: blur(10px);
-  animation: fadeIn 2s ease-in;
-}
-
-.info p {
-  margin: 0.5rem 0;
-}
-
-.badge {
-  display: inline-block;
-  padding: 0.5rem 1rem;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 20px;
-  margin: 0.5rem;
+  color: #6a6a6a;
   font-size: 0.9rem;
 }
 
-button {
-  margin-top: 1.5rem;
-  padding: 1rem 2rem;
-  font-size: 1rem;
-  font-weight: 600;
-  color: #667eea;
-  background: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-
-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
-}
-
-button:active {
-  transform: translateY(0);
-}
-
+/* Animations */
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(-20px);
+    transform: translateY(20px);
   }
   to {
     opacity: 1;
@@ -89,12 +332,159 @@ button:active {
   }
 }
 
+/* Responsive Design */
 @media (max-width: 768px) {
-  h1 {
+  .clock {
+    top: 1rem;
+    right: 1rem;
+  }
+  
+  #time {
+    font-size: 0.8rem;
+  }
+  
+  .header {
+    padding: 3rem 2rem 2rem;
+  }
+  
+  .header h1 {
     font-size: 2rem;
   }
   
-  p {
+  .tagline {
+    font-size: 0.9rem;
+  }
+  
+  .apps-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  
+  .app-card {
+    padding: 2rem 1.5rem;
+  }
+  
+  .app-description {
+    opacity: 1;
+    max-height: 100px;
+  }
+}
+
+@media (max-width: 480px) {
+  .clock {
+    top: 0.75rem;
+    right: 0.75rem;
+  }
+  
+  #time {
+    font-size: 0.75rem;
+  }
+  
+  .header h1 {
+    font-size: 1.75rem;
+  }
+  
+  .header {
+    padding: 2.5rem 1rem 1.5rem;
+  }
+  
+  .tagline {
+    font-size: 0.85rem;
+  }
+  
+  .container {
+    padding: 1rem;
+  }
+}
+@m}
+  
+  .clock-ring {
+    width: 110px;
+    height: 110px;
+  }
+  
+  .clock-ring svg {
+    width: 110px;
+    height: 110px;
+  }
+  
+  .clock .date {
+    font-size: 0.6rem;
+  }
+  
+  .clock .time {
+    font-size: 0.9rem;
+  }
+  
+  .clock .elapsed {
+    font-size: 0.5rem;
+  }
+  
+  .header h1 {
+    font-size: 2.5rem;
+  }
+  
+  .tagline {
     font-size: 1rem;
+  }
+  
+  .apps-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  
+  .app-card {
+    padding: 2rem 1.5rem;
+  }
+  
+  .app-description {
+    opacity: 1;
+    max-height: 100px;
+  }
+}
+
+@media (max-width: 480px) {
+  .clock {
+    top: 0.75rem;
+    right: 0.75rem;
+  }
+  
+  .clock-ring {
+    width: 90px;
+    height: 90px;
+  }
+  
+  .clock-ring svg {
+    width: 90px;
+    height: 90px;
+  }
+  
+  .clock .date {
+    font-size: 0.55rem;
+  }
+  
+  .clock .time {
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
+  }
+  
+  .clock .elapsed {
+    font-size: 0.45rem
+  
+  .clock .time {
+    font-size: 0.9rem;
+    letter-spacing: 1px;
+  }
+  
+  .header h1 {
+    font-size: 2rem;
+  }
+  
+  .header {
+    padding: 2rem 1rem 1.5rem;
+  }
+  
+  .container {
+    padding: 1rem;
   }
 }
