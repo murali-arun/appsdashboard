@@ -63,8 +63,8 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || 22 }}
           script: |
-            mkdir -p /opt/template-static
-            ls -la /opt/template-static
+            mkdir -p /opt/appsdashboard
+            ls -la /opt/appsdashboard
 
       - name: Upload dist/ to VPS via SCP (over SSH)
         uses: appleboy/scp-action@v0.1.7
@@ -74,7 +74,7 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || 22 }}
           source: "dist/*"
-          target: "/opt/template-static/"
+          target: "/opt/appsdashboard/"
           strip_components: 1
           overwrite: true
 
@@ -87,7 +87,7 @@ jobs:
           port: ${{ secrets.VPS_PORT || 22 }}
           script: |
             # Create nginx config
-            cat > /opt/template-static-nginx.conf << 'EOF'
+            cat > /opt/appsdashboard-nginx.conf << 'EOF'
             server {
                 listen 80;
                 server_name localhost;
@@ -132,16 +132,16 @@ jobs:
             EOF
 
             # Create docker-compose file
-            cat > /opt/template-static-compose.yml << 'EOF'
+            cat > /opt/appsdashboard-compose.yml << 'EOF'
             version: '3.8'
 
             services:
-              template-static:
+              appsdashboard:
                 image: nginx:alpine
-                container_name: base-template-arun
+                container_name: appsdashboard
                 volumes:
-                  - /opt/template-static:/usr/share/nginx/html:ro
-                  - /opt/template-static-nginx.conf:/etc/nginx/conf.d/default.conf:ro
+                  - /opt/appsdashboard:/usr/share/nginx/html:ro
+                  - /opt/appsdashboard-nginx.conf:/etc/nginx/conf.d/default.conf:ro
                 networks:
                   - npm_default
                 restart: unless-stopped
@@ -153,8 +153,8 @@ jobs:
 
             # Start or restart the container
             cd /opt
-            docker-compose -f template-static-compose.yml down || true
-            docker-compose -f template-static-compose.yml up -d
+            docker-compose -f appsdashboard-compose.yml down || true
+            docker-compose -f appsdashboard-compose.yml up -d
             
             # Verify container is running
-            docker ps | grep base-template-arun
+            docker ps | grep appsdashboard
