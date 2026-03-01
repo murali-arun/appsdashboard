@@ -31,6 +31,12 @@ const apps = [
     url: 'https://gym.anmious.cloud',
     icon: '💪',
     description: 'Track workouts, progress, and fitness goals'
+  },
+  {
+    name: 'Smart Debt Planner',
+    url: 'https://finance.anmious.cloud',
+    icon: '💸',
+    description: 'Plan debt payoff strategies and compare optimized outcomes'
   }
 ]
 
