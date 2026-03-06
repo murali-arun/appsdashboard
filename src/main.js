@@ -37,6 +37,12 @@ const apps = [
     url: 'https://finance.anmious.cloud',
     icon: '💸',
     description: 'Plan debt payoff strategies and compare optimized outcomes'
+  },
+  {
+    name: 'Couple Outfit Configurator',
+    url: 'https://outfits.anmious.cloud',
+    icon: '👗',
+    description: 'Design coordinated bride & groom outfits with layered SVG avatars'
   }
 ]
 
