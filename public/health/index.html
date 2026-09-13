@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>86 → 76 kg | Nov 30 Cut Tracker</title>
+<title>Cut 76 — Daily Health Protocol</title>
 <style>
   :root{
     --bg:#0b1020;
@@ -164,6 +164,144 @@
     #progressBar{transition:none}
   }
 </style>
+<style>
+  /* Studio mockup — editorial health dashboard */
+  :root{
+    --bg:#f2f0e8;
+    --panel:#fbfaf6;
+    --panel2:#e9e6dc;
+    --text:#17302e;
+    --muted:#66736f;
+    --line:#d8d8ce;
+    --accent:#f06d48;
+    --accent2:#1f5b52;
+    --warn:#a76a16;
+    --danger:#b93d35;
+    --ok:#28735f;
+    --input:#fffefb;
+    --shadow:0 18px 45px rgba(23,48,46,.07);
+  }
+  body{
+    background:
+      linear-gradient(rgba(31,91,82,.035) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(31,91,82,.035) 1px,transparent 1px),
+      var(--bg);
+    background-size:32px 32px;
+    color:var(--text);
+  }
+  body::before{
+    content:"";position:fixed;inset:0 0 auto;height:5px;
+    background:linear-gradient(90deg,var(--accent) 0 34%,#f2bd57 34% 58%,var(--accent2) 58%);
+    z-index:100;
+  }
+  .wrap{max-width:1280px;padding:26px 20px 72px}
+  .topbar{
+    min-height:58px;display:flex;align-items:center;justify-content:space-between;gap:24px;
+    margin-bottom:18px;border-bottom:1px solid rgba(23,48,46,.18);
+  }
+  .brand{display:flex;align-items:center;gap:10px;font-weight:900;letter-spacing:-.02em}
+  .brand-mark{display:grid;place-items:center;width:30px;height:30px;background:var(--text);color:#fff;border-radius:50%;font-size:12px}
+  .topnav{display:flex;align-items:center;gap:24px}
+  .topnav a{color:var(--muted);font-size:13px;font-weight:750;text-decoration:none}
+  .topnav a[aria-current="page"]{color:var(--text);text-decoration:underline;text-decoration-color:var(--accent);text-underline-offset:7px;text-decoration-thickness:2px}
+  .season-badge{font-size:11px;font-weight:850;letter-spacing:.08em;text-transform:uppercase;border:1px solid var(--text);padding:7px 10px;border-radius:3px}
+  .card{background:rgba(251,250,246,.96);border:1px solid var(--line);border-radius:12px;box-shadow:none}
+  .hero{grid-template-columns:minmax(0,1.55fr) minmax(280px,.65fr);gap:12px}
+  .hero-main{
+    position:relative;isolation:isolate;overflow:hidden;padding:40px 42px;min-height:360px;
+    display:flex;flex-direction:column;justify-content:space-between;background:var(--text);color:#f7f3e8;border:0;
+  }
+  .hero-main::after{
+    content:"";position:absolute;right:-80px;top:-110px;width:330px;height:330px;border:70px solid rgba(242,189,87,.16);border-radius:50%;z-index:-1;
+  }
+  .hero-copy{max-width:720px}
+  .eyebrow{color:var(--accent);font-size:11px;font-weight:900;letter-spacing:.16em}
+  h1{display:flex;align-items:baseline;gap:.13em;margin:16px 0 18px;font-family:Georgia,"Times New Roman",serif;font-size:clamp(70px,10vw,124px);font-weight:400;letter-spacing:-.075em;line-height:.76}
+  h1 small{font-family:Inter,ui-sans-serif,system-ui,sans-serif;font-size:.16em;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#9eb5af}
+  h1 em{font-family:Inter,ui-sans-serif,system-ui,sans-serif;font-size:.17em;font-style:normal;font-weight:750;letter-spacing:0;color:#9eb5af}
+  .hero-main .sub{color:#c9d4cf;font-size:15px;max-width:640px}
+  .hero-main .pillrow{padding-top:20px;border-top:1px solid rgba(255,255,255,.14)}
+  .hero-main .pill{border:0;border-radius:0;background:transparent;padding:0 18px 0 0;color:#f7f3e8;font-size:12px;font-weight:750}
+  .hero-main .pill::before{content:"•";color:var(--accent);margin-right:8px}
+  .hero-side{padding:30px;background:#dce7df;border-color:#cbd8d0;gap:30px}
+  .side-label{font-size:11px;font-weight:850;letter-spacing:.1em;text-transform:uppercase;color:#57706a}
+  .big{font-family:Georgia,"Times New Roman",serif;font-size:64px;font-weight:400;color:var(--text);line-height:1;margin-top:10px}
+  .hero-side hr{width:100%;border:0;border-top:1px solid rgba(23,48,46,.18);margin:0}
+  #progressText{line-height:1.35}
+  .grid4{gap:0;margin-top:12px;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .grid4 .card{border:0;border-right:1px solid var(--line);border-radius:0;background:transparent;padding:22px 24px}
+  .grid4 .card:last-child{border-right:0}
+  .metric .v{font-family:Georgia,"Times New Roman",serif;font-size:34px;font-weight:400;color:var(--text)}
+  .metric .k{color:var(--accent2);font-size:10px;font-weight:900}
+  .metric .muted{font-size:12px}
+  .section{margin-top:28px}
+  .section-title{align-items:flex-end;margin:0 0 12px}
+  .section-title h2{font-family:Georgia,"Times New Roman",serif;font-size:30px;font-weight:400;letter-spacing:-.03em}
+  .section-title p{margin-top:3px}
+  .routine{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));padding:0;overflow:hidden}
+  .rbox{grid-template-columns:100px 1fr;gap:14px;padding:18px 22px;border:0;border-bottom:1px solid var(--line)}
+  .rbox:nth-child(odd){border-right:1px solid var(--line)}
+  .rbox:nth-last-child(-n+2){border-bottom:0}
+  .rtime{color:var(--accent2);font-size:10px;letter-spacing:.08em;text-transform:uppercase}
+  .rname{font-size:14px}
+  .rmeta{font-size:12px}
+  .training{margin:0;padding:18px 22px;border:0;border-right:1px solid var(--line);border-bottom:1px solid var(--line);border-radius:0;background:#fff2e8}
+  .daychip{border-radius:3px;background:var(--text);color:#fff;padding:5px 7px;font-size:10px}
+  .toolbar{top:12px;padding:14px 16px;margin-top:28px;background:rgba(251,250,246,.94);backdrop-filter:blur(12px);box-shadow:0 10px 30px rgba(23,48,46,.08)}
+  .toolbar strong{font-family:Georgia,"Times New Roman",serif;font-size:20px;font-weight:400}
+  button,label.filebtn{background:transparent;color:var(--text);border:1px solid #b8c0ba;border-radius:5px;padding:9px 12px;font-size:12px;font-weight:800}
+  button.primary{background:var(--text);color:#fff;border-color:var(--text)}
+  button:hover,label.filebtn:hover{filter:none;background:#e8ebe5}
+  button.primary:hover{background:var(--accent2)}
+  button:focus-visible,label.filebtn:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid rgba(240,109,72,.38);outline-offset:3px}
+  .progress-card{padding:22px 24px}
+  .progress-wrap{height:8px;background:#e4e3da;border:0;border-radius:0}
+  #progressBar{background:var(--accent);transition:width .25s}
+  .chart-card{padding:24px;margin-top:12px}
+  .table-card{box-shadow:var(--shadow)}
+  .weekbar{padding:18px 20px;background:var(--text);color:#fff;border-bottom:0}
+  .weekbar .eyebrow{color:#f5b099}
+  .week-title{font-family:Georgia,"Times New Roman",serif;font-size:22px;font-weight:400}
+  .weekbar button{border-color:rgba(255,255,255,.28);color:#fff}
+  .weekbar button:hover{background:rgba(255,255,255,.1)}
+  .table-scroll{max-height:70vh}
+  th{background:#ece9df;color:#4f625d;font-size:9px;font-weight:900;letter-spacing:.1em}
+  th,td{padding:10px 8px;border-color:#e3e1d8}
+  tr.today{outline:2px solid var(--accent);background:#fff7f0}
+  tr.weekend{background:#f7f5ef}
+  tr:hover{background:#f0f4ef}
+  input,select,textarea{background:var(--input);color:var(--text);border:1px solid #cfd2ca;border-radius:4px;padding:9px 7px}
+  input:focus,select:focus,textarea:focus{outline:2px solid rgba(240,109,72,.35);border-color:var(--accent)}
+  .target{color:var(--accent2)}
+  .help{position:relative;padding:22px 24px 22px 62px;background:#fff2e8;color:#655c54;font-size:13px}
+  .help::before{content:"i";position:absolute;left:22px;top:22px;display:grid;place-items:center;width:24px;height:24px;border:1px solid var(--accent);border-radius:50%;color:var(--accent);font-family:Georgia,serif;font-weight:800}
+  .footer{text-align:left;border-top:1px solid var(--line);padding-top:18px}
+  .pin-gate{background:var(--bg)}
+  .pin-card{border-radius:12px;background:var(--panel);border-color:var(--line);box-shadow:var(--shadow);text-align:left}
+  .pin-card h1{display:block;font-family:Georgia,"Times New Roman",serif;font-size:38px;color:var(--text);letter-spacing:-.04em}
+  .pin-form input{text-align:left;border-radius:4px;letter-spacing:.4em}
+  @media(max-width:900px){
+    .hero{grid-template-columns:1fr}.hero-main{min-height:330px}.grid4{grid-template-columns:repeat(2,1fr)}
+    .grid4 .card:nth-child(2){border-right:0}.grid4 .card:nth-child(-n+2){border-bottom:1px solid var(--line)}
+    .topnav{display:none}.toolbar{position:static}.routine{grid-template-columns:1fr}.rbox,.rbox:nth-child(odd),.training{border-right:0}.rbox:nth-last-child(2){border-bottom:1px solid var(--line)}
+  }
+  @media(max-width:700px){
+    .wrap{padding:20px 12px 52px}.topbar{min-height:52px}.season-badge{font-size:9px}
+    .hero-main,.hero-side{padding:26px 22px}.hero-main{min-height:390px}h1{font-size:76px;flex-wrap:wrap}
+    .hero-main .pillrow{display:grid;grid-template-columns:1fr 1fr;gap:10px}.grid4{grid-template-columns:1fr 1fr}
+    .grid4 .card{padding:18px 16px}.metric .v{font-size:28px}.section-title{align-items:flex-start;flex-direction:column}
+    .toolbar{align-items:flex-start}.actions{display:grid;grid-template-columns:1fr 1fr;width:100%}.actions>*{text-align:center}
+    .table-scroll{max-height:none;overflow:visible;padding:10px;background:#ece9df}
+    table{min-width:0}thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+    tbody{display:grid;gap:10px}tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:16px}
+    tr.today{outline-offset:0}td,td:first-child{display:grid;gap:5px;padding:0;border:0;text-align:left}td:first-child{grid-column:1/-1;padding-bottom:10px;border-bottom:1px solid var(--line);font-size:16px}
+    td::before{color:var(--muted);font-size:9px;font-weight:900;letter-spacing:.09em;text-transform:uppercase}
+    td:nth-child(2)::before{content:"Target"}td:nth-child(3)::before{content:"AM weight"}td:nth-child(4)::before{content:"7-day avg"}td:nth-child(5)::before{content:"Calories"}td:nth-child(6)::before{content:"Protein (g)"}td:nth-child(7)::before{content:"Steps"}td:nth-child(8)::before{content:"Lift"}td:nth-child(9)::before{content:"Cardio"}td:nth-child(10)::before{content:"Sleep"}td:nth-child(11)::before{content:"Waist"}td:nth-child(12)::before{content:"Notes"}
+    td:nth-child(12){grid-column:1/-1}.notes-cell,.notes-input{min-width:0}.chart-scroll{overflow-x:auto}.chart-scroll canvas{min-width:720px}
+  }
+  @media(max-width:430px){.grid4{grid-template-columns:1fr}.grid4 .card{border-right:0!important;border-bottom:1px solid var(--line)}.grid4 .card:last-child{border-bottom:0}.actions{grid-template-columns:1fr}.hero-main .pillrow{grid-template-columns:1fr}}
+  @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition-duration:.01ms!important}}
+</style>
 </head>
 <body>
 <div id="pinGate" class="pin-gate">
@@ -180,28 +318,37 @@
 </div>
 <div id="healthContent" hidden>
 <div class="wrap">
-  <section class="hero">
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark">76</span><span>Cut Protocol</span></div>
+    <nav class="topnav" aria-label="Page sections">
+      <a href="#overview" aria-current="page">Overview</a>
+      <a href="#rhythm">Daily rhythm</a>
+      <a href="#daily-tracker">Tracker</a>
+    </nav>
+    <span class="season-badge">Sep 13 — Nov 30</span>
+  </header>
+  <section class="hero" id="overview">
     <div class="card hero-main">
-      <div class="eyebrow">Fat-loss tracker</div>
-      <h1>86 → 76 kg</h1>
-      <div class="sub">
-        Sep 13 – Nov 30, 2026. Weekly guideposts show the potential trend—not a score you must hit every morning.
-        Track the inputs and judge progress by the 7-day average.
+      <div class="hero-copy">
+        <div class="eyebrow">79-day focus · Autumn 2026</div>
+        <h1><span>86</span><small>to</small><span>76</span><em>kg</em></h1>
+        <div class="sub">A steady cut built around repeatable days—not perfect ones. Log the inputs, protect recovery, and judge the trend by the seven-day average.</div>
       </div>
       <div class="pillrow">
-        <span class="pill">1,900 kcal/day</span>
+        <span class="pill">1,900 kcal</span>
         <span class="pill">150 g protein</span>
-        <span class="pill">12,000 steps</span>
+        <span class="pill">12k steps</span>
         <span class="pill">7–8 h sleep</span>
       </div>
     </div>
     <div class="card hero-side">
       <div>
-        <div class="muted">Latest 7-day average</div>
+        <div class="side-label">Latest 7-day average</div>
         <div id="latestAvg" class="big">—</div>
       </div>
+      <hr>
       <div>
-        <div class="muted">Estimated progress</div>
+        <div class="side-label">Estimated progress</div>
         <div id="progressText" style="font-size:19px;font-weight:800;margin-top:5px">Enter your first weigh-in</div>
       </div>
     </div>
@@ -214,7 +361,7 @@
     <div class="card metric"><div class="k">Goal pace</div><div class="v">~0.9</div><div class="muted">kg/week stretch pace</div></div>
   </section>
 
-  <section class="section">
+  <section class="section" id="rhythm">
     <div class="section-title">
       <div><h2>Daily rhythm</h2><p>A simple sequence to make the plan easy to follow.</p></div>
     </div>
@@ -271,7 +418,7 @@
     </div>
   </section>
 
-  <section class="section card table-card">
+  <section class="section card table-card" id="daily-tracker">
     <div class="weekbar">
       <div>
         <div class="eyebrow">Daily tracker</div>
