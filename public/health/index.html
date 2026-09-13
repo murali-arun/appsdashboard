@@ -31,7 +31,7 @@
     color:var(--text);
     font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   }
-  .wrap{max-width:1180px;margin:0 auto;padding:28px 18px 64px}
+  .wrap{max-width:1440px;margin:0 auto;padding:28px 12px 64px}
   .hero{
     display:grid;grid-template-columns:1.35fr .65fr;gap:18px;align-items:stretch;
   }
@@ -80,18 +80,26 @@
   }
   button.primary{background:var(--accent);color:#07140f;border-color:transparent}
   button:hover,label.filebtn:hover{filter:brightness(1.08)}
-  button:focus-visible,label.filebtn:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid rgba(119,168,255,.72);outline-offset:2px}
+  button:focus-visible,label.filebtn:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid rgba(119,168,255,.72);outline-offset:2px}
   #saveStatus{font-size:13px;color:var(--muted)}
   .progress-card{padding:18px}
   .progress-wrap{height:12px;background:#0a1222;border:1px solid var(--line);border-radius:999px;overflow:hidden}
   #progressBar{height:100%;width:0;background:linear-gradient(90deg,var(--accent2),var(--accent));transition:width .25s}
   .progress-meta{display:flex;justify-content:space-between;color:var(--muted);font-size:12px;margin-top:8px}
-  .chart-scroll{overflow-x:auto;padding-bottom:4px;scrollbar-color:var(--line) transparent}
-  canvas{width:100%;min-width:800px;height:310px;display:block}
+  .chart-scroll{overflow:visible}
+  canvas{width:100%;height:300px;display:block}
   .chart-card{padding:18px;margin-top:14px}
+  .chart-legend{display:flex;gap:14px;align-items:center;color:var(--muted);font-size:12px;white-space:nowrap}
+  .legend-item{display:flex;gap:7px;align-items:center}
+  .legend-dot{width:7px;height:7px;border-radius:50%;background:var(--accent2);box-shadow:0 0 0 3px rgba(119,168,255,.12)}
+  .legend-line{width:18px;height:3px;border-radius:999px;background:var(--accent)}
   .table-card{overflow:hidden}
+  .weekbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 18px;border-bottom:1px solid var(--line)}
+  .week-title{font-size:18px;font-weight:850;margin-top:3px}
+  .week-nav{display:flex;align-items:center;gap:8px}
+  .week-nav button:disabled{opacity:.38;cursor:not-allowed;filter:none}
   .table-scroll{overflow:auto;max-height:66vh}
-  table{border-collapse:separate;border-spacing:0;width:100%;min-width:1080px}
+  table{border-collapse:separate;border-spacing:0;width:100%;min-width:1240px}
   th{
     position:sticky;top:0;background:#18233b;color:#dce6f7;
     font-size:11px;text-transform:uppercase;letter-spacing:.07em;z-index:2;
@@ -101,12 +109,14 @@
   tr.today{outline:2px solid var(--accent2);outline-offset:-2px;background:rgba(119,168,255,.06)}
   tr.weekend{background:rgba(255,255,255,.015)}
   tr:hover{background:rgba(255,255,255,.035)}
-  input,select{
+  input,select,textarea{
     width:100%;background:var(--input);color:var(--text);border:1px solid #344565;border-radius:8px;
     padding:8px 7px;font:inherit;min-width:72px;
   }
-  input:focus,select:focus{outline:2px solid rgba(119,168,255,.45);border-color:var(--accent2)}
+  input:focus,select:focus,textarea:focus{outline:2px solid rgba(119,168,255,.45);border-color:var(--accent2)}
   input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent)}
+  .notes-cell{min-width:240px;text-align:left}
+  .notes-input{min-width:220px;min-height:64px;resize:vertical;line-height:1.35;white-space:pre-wrap;overflow-wrap:anywhere}
   .target{font-weight:800;color:#d7e7ff}
   .avg{font-weight:800;color:var(--accent)}
   .good{color:var(--ok)}
@@ -143,6 +153,11 @@
     .rbox{grid-template-columns:1fr;gap:5px;padding:15px 2px}
     .training{padding:15px 12px}
     button,label.filebtn{min-height:44px}
+    .weekbar{align-items:flex-start;flex-direction:column}
+    .week-nav{width:100%;display:grid;grid-template-columns:1fr 1.35fr 1fr}
+    .chart-card .section-title{align-items:flex-start;flex-direction:column}
+    .chart-scroll{overflow-x:auto;scrollbar-color:var(--line) transparent}
+    .chart-scroll canvas{min-width:760px}
   }
   @media(prefers-reduced-motion:reduce){
     html{scroll-behavior:auto}
@@ -246,6 +261,10 @@
   <section class="card chart-card">
     <div class="section-title">
       <div><h2>Weight trend</h2><p>Your 7-day average compared with weekly guideposts.</p></div>
+      <div class="chart-legend" aria-hidden="true">
+        <span class="legend-item"><span class="legend-dot"></span>Weekly guide</span>
+        <span class="legend-item"><span class="legend-line"></span>7-day average</span>
+      </div>
     </div>
     <div class="chart-scroll">
       <canvas id="chart" width="1100" height="310" role="img" aria-label="Projected weekly weight guideposts from 86 to 76 kilograms. Your seven-day average appears after weigh-ins are entered.">Your weekly projected weights run from 86 kilograms on September 13 to 76 kilograms on November 30.</canvas>
@@ -253,13 +272,24 @@
   </section>
 
   <section class="section card table-card">
+    <div class="weekbar">
+      <div>
+        <div class="eyebrow">Daily tracker</div>
+        <div id="weekLabel" class="week-title" aria-live="polite"></div>
+      </div>
+      <nav class="week-nav" aria-label="Choose tracker week">
+        <button id="prevWeekBtn" type="button" aria-label="Previous week">← Previous</button>
+        <button id="currentWeekBtn" type="button">Current week</button>
+        <button id="nextWeekBtn" type="button" aria-label="Next week">Next →</button>
+      </nav>
+    </div>
     <div class="table-scroll">
       <table id="tracker">
         <thead>
           <tr>
             <th>Date</th><th>Target</th><th>AM weight</th><th>7-day avg</th>
             <th>Calories</th><th>Protein</th><th>Steps</th><th>Lift</th>
-            <th>Cardio</th><th>Sleep</th><th>Waist</th><th>Notes</th>
+            <th>Cardio</th><th>Sleep</th><th>Waist (in)</th><th>Notes / weekly review</th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -294,6 +324,7 @@
   const reveal = () => {
     gate.hidden = true;
     content.hidden = false;
+    requestAnimationFrame(()=>window.dispatchEvent(new Event('resize')));
   };
 
   if (sessionStorage.getItem(ACCESS_KEY) === 'true') {
@@ -346,6 +377,17 @@
   if (!state || !Array.isArray(state.days)) state = {days};
   // Merge in any missing days without overwriting saved data.
   state.days = days.map(base => ({...base, ...(state.days.find(x => x.date===base.date) || {})}));
+  const totalWeeks=Math.ceil(state.days.length/7);
+
+  function localISO(date=new Date()){
+    const local=new Date(date.getTime()-date.getTimezoneOffset()*60000);
+    return local.toISOString().slice(0,10);
+  }
+  function weekIndexForDate(iso){
+    const dayIndex=Math.floor((new Date(iso+'T00:00:00')-start)/msDay);
+    return Math.max(0,Math.min(totalWeeks-1,Math.floor(dayIndex/7)));
+  }
+  let visibleWeek=weekIndexForDate(localISO());
 
   function load(){
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY)); }
@@ -386,14 +428,27 @@
   }
   function render(){
     tbody.innerHTML='';
-    const todayISO = new Date().toISOString().slice(0,10);
+    const todayISO=localISO();
+    const firstIndex=visibleWeek*7;
+    const lastIndex=Math.min(firstIndex+7,state.days.length);
+    const weekDays=state.days.slice(firstIndex,lastIndex);
 
-    state.days.forEach((day,i)=>{
+    const firstDate=new Date(weekDays[0].date+'T00:00:00');
+    const lastDate=new Date(weekDays.at(-1).date+'T00:00:00');
+    const firstLabel=firstDate.toLocaleDateString(undefined,{month:'short',day:'numeric'});
+    const lastLabel=lastDate.toLocaleDateString(undefined,{month:firstDate.getMonth()===lastDate.getMonth()?undefined:'short',day:'numeric'});
+    $('#weekLabel').textContent=`${firstLabel}–${lastLabel} · Week ${visibleWeek+1} of ${totalWeeks}`;
+    $('#prevWeekBtn').disabled=visibleWeek===0;
+    $('#nextWeekBtn').disabled=visibleWeek===totalWeeks-1;
+
+    weekDays.forEach((day,offset)=>{
+      const i=firstIndex+offset;
       const tr=document.createElement('tr');
       const dow = new Date(day.date+'T00:00:00').getDay();
       if(day.date===todayISO) tr.classList.add('today');
       if(dow===0 || dow===6) tr.classList.add('weekend');
       tr.dataset.date=day.date;
+      tr.dataset.index=i;
 
       const avg=rollingAvg(i);
       tr.innerHTML = `
@@ -407,8 +462,8 @@
         <td><input data-k="lift" type="checkbox" ${day.lift?'checked':''}></td>
         <td><input data-k="cardio" inputmode="numeric" type="number" step="1" value="${esc(day.cardio)}" placeholder="min"></td>
         <td><input data-k="sleep" inputmode="decimal" type="number" step="0.1" value="${esc(day.sleep)}" placeholder="hrs"></td>
-        <td><input data-k="waist" inputmode="decimal" type="number" step="0.1" value="${esc(day.waist)}" placeholder="cm"></td>
-        <td><input data-k="notes" type="text" value="${esc(day.notes)}" placeholder="${dow===0?'Weekly review':''}"></td>
+        <td><input data-k="waist" inputmode="decimal" type="number" step="0.1" value="${esc(day.waist)}" placeholder="in"></td>
+        <td class="notes-cell"><textarea class="notes-input" data-k="notes" rows="2" placeholder="${dow===0?'Weekly review: wins, challenges, next adjustment':'Notes'}">${esc(day.notes)}</textarea></td>
       `;
       tbody.appendChild(tr);
     });
@@ -439,8 +494,8 @@
   });
 
   function refreshAverages(){
-    [...tbody.rows].forEach((row,i)=>{
-      row.cells[3].textContent = rollingAvg(i)?.toFixed(1) || '—';
+    [...tbody.rows].forEach(row=>{
+      row.cells[3].textContent = rollingAvg(Number(row.dataset.index))?.toFixed(1) || '—';
     });
   }
 
@@ -473,8 +528,8 @@
   function drawChart(){
     const c=$('#chart'), ctx=c.getContext('2d');
     const rect=c.getBoundingClientRect(), dpr=window.devicePixelRatio||1;
-    c.width=Math.max(800,Math.floor(rect.width*dpr));
-    c.height=Math.floor(310*dpr);
+    c.width=Math.max(1,Math.floor(rect.width*dpr));
+    c.height=Math.floor(300*dpr);
     ctx.scale(dpr,dpr);
     const W=c.width/dpr,H=c.height/dpr;
     ctx.clearRect(0,0,W,H);
@@ -489,48 +544,44 @@
     if(lastIndex-milestones.at(-1)<4) milestones[milestones.length-1]=lastIndex;
     else if(milestones.at(-1)!==lastIndex) milestones.push(lastIndex);
 
-    ctx.font='11px system-ui';
-    ctx.strokeStyle='#283654'; ctx.fillStyle='#9aa7bd'; ctx.lineWidth=1;
+    ctx.font='11px system-ui';ctx.textAlign='left';
+    ctx.strokeStyle='rgba(154,167,189,.18)';ctx.fillStyle='#8795ad';ctx.lineWidth=1;
     [76,78,80,82,84,86].forEach(v=>{
       ctx.beginPath();ctx.moveTo(pad.l,y(v));ctx.lineTo(W-pad.r,y(v));ctx.stroke();
       ctx.fillText(v+' kg',4,y(v)+4);
     });
 
-    // Weekly guide rails and dates
+    // Weekly dates
     ctx.font='10px system-ui';
     milestones.forEach(i=>{
       const X=x(i);
-      ctx.strokeStyle='rgba(119,168,255,.13)';ctx.lineWidth=1;
-      ctx.beginPath();ctx.moveTo(X,pad.t);ctx.lineTo(X,H-pad.b);ctx.stroke();
       const d=new Date(state.days[i].date+'T00:00:00');
       const label=d.toLocaleDateString(undefined,{month:'short',day:'numeric'});
-      ctx.fillStyle='#9aa7bd';ctx.textAlign='center';
+      ctx.fillStyle='#8795ad';ctx.textAlign='center';
       ctx.fillText(label,X,H-13);
     });
+
+    // Soft projected area
+    const area=ctx.createLinearGradient(0,pad.t,0,H-pad.b);
+    area.addColorStop(0,'rgba(119,168,255,.16)');
+    area.addColorStop(1,'rgba(119,168,255,0)');
+    ctx.fillStyle=area;ctx.beginPath();
+    state.days.forEach((d,i)=>{const X=x(i),Y=y(d.target);i?ctx.lineTo(X,Y):ctx.moveTo(X,Y);});
+    ctx.lineTo(x(lastIndex),H-pad.b);ctx.lineTo(x(0),H-pad.b);ctx.closePath();ctx.fill();
 
     // Projected trend line
     ctx.strokeStyle='#77a8ff';ctx.lineWidth=2;ctx.setLineDash([]);ctx.beginPath();
     state.days.forEach((d,i)=>{ const X=x(i),Y=y(d.target); i?ctx.lineTo(X,Y):ctx.moveTo(X,Y);});
     ctx.stroke();
 
-    // Direct weekly weight labels
-    ctx.font='600 11px system-ui';
-    milestones.forEach((i,milestoneIndex)=>{
+    // Clean, consistently aligned weekly values
+    ctx.font='600 11px system-ui';ctx.textAlign='center';
+    milestones.forEach(i=>{
       const X=x(i),Y=y(state.days[i].target);
-      const label=`${state.days[i].target.toFixed(1)} kg`;
-      const boxW=52,boxH=20;
-      const boxX=Math.max(pad.l-boxW/2,Math.min(W-pad.r-boxW, X-boxW/2));
-      const boxY=milestoneIndex%2===0 ? Y-28 : Y+9;
-
       ctx.fillStyle='#77a8ff';
-      ctx.beginPath();ctx.arc(X,Y,4,0,Math.PI*2);ctx.fill();
-      ctx.fillStyle='rgba(11,16,32,.94)';
-      ctx.beginPath();
-      ctx.roundRect(boxX,boxY,boxW,boxH,7);
-      ctx.fill();
-      ctx.strokeStyle='rgba(119,168,255,.55)';ctx.lineWidth=1;ctx.stroke();
-      ctx.fillStyle='#dce8ff';ctx.textAlign='center';
-      ctx.fillText(label,boxX+boxW/2,boxY+14);
+      ctx.beginPath();ctx.arc(X,Y,3.5,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#dce8ff';
+      ctx.fillText(state.days[i].target.toFixed(1),X,Y-10);
     });
 
     // Rolling average line
@@ -544,19 +595,27 @@
     });
     if(started) ctx.stroke();
 
-    ctx.textAlign='left';ctx.font='11px system-ui';
-    ctx.fillStyle='#77a8ff';ctx.beginPath();ctx.arc(W-226,11,4,0,Math.PI*2);ctx.fill();ctx.fillStyle='#cdd8eb';ctx.fillText('Weekly guide',W-216,15);
-    ctx.fillStyle='#74d3ae';ctx.fillRect(W-108,9,16,3);ctx.fillStyle='#cdd8eb';ctx.fillText('7-day avg',W-86,15);
-
     const latest=latestAvg();
     const nextMilestone=milestones.find(i=>state.days[i].date>=new Date().toISOString().slice(0,10)) ?? lastIndex;
     const nextDate=new Date(state.days[nextMilestone].date+'T00:00:00').toLocaleDateString(undefined,{month:'long',day:'numeric'});
     c.setAttribute('aria-label',`Projected weekly weight guideposts from 86 to 76 kilograms. Next guidepost: ${state.days[nextMilestone].target.toFixed(1)} kilograms on ${nextDate}.${latest?` Current seven-day average: ${latest.avg.toFixed(1)} kilograms.`:' Enter weigh-ins to show your seven-day average.'}`);
   }
 
+  $('#prevWeekBtn').addEventListener('click',()=>{
+    if(visibleWeek>0){visibleWeek--;render();}
+  });
+  $('#currentWeekBtn').addEventListener('click',()=>{
+    visibleWeek=weekIndexForDate(localISO());
+    render();
+  });
+  $('#nextWeekBtn').addEventListener('click',()=>{
+    if(visibleWeek<totalWeeks-1){visibleWeek++;render();}
+  });
   $('#saveBtn').addEventListener('click',()=>save(true));
   $('#todayBtn').addEventListener('click',()=>{
-    const todayISO=new Date().toISOString().slice(0,10);
+    const todayISO=localISO();
+    visibleWeek=weekIndexForDate(todayISO);
+    render();
     const row=tbody.querySelector(`tr[data-date="${todayISO}"]`) || tbody.querySelector('tr');
     row?.scrollIntoView({behavior:'smooth',block:'center'});
   });
@@ -571,7 +630,7 @@
     download('cut-tracker-backup.json',JSON.stringify(state,null,2),'application/json');
   });
   $('#csvBtn').addEventListener('click',()=>{
-    const header=['Date','Target kg','AM weight kg','7-day avg kg','Calories','Protein g','Steps','Lift','Cardio min','Sleep hrs','Waist cm','Notes'];
+    const header=['Date','Target kg','AM weight kg','7-day avg kg','Calories','Protein g','Steps','Lift','Cardio min','Sleep hrs','Waist in','Notes'];
     const rows=state.days.map((d,i)=>[
       d.date,d.target.toFixed(2),d.weight,rollingAvg(i)?.toFixed(2)||'',d.calories,d.protein,d.steps,d.lift?'Y':'N',d.cardio,d.sleep,d.waist,d.notes
     ]);
