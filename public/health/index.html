@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>86 → 76 kg | Nov 30 Cut Tracker</title>
+<style>
+  :root{
+    --bg:#0b1020;
+    --panel:#121a2d;
+    --panel2:#18233b;
+    --text:#f6f7fb;
+    --muted:#9aa7bd;
+    --line:#283654;
+    --accent:#74d3ae;
+    --accent2:#77a8ff;
+    --warn:#ffcc66;
+    --danger:#ff7b7b;
+    --ok:#74d3ae;
+    --input:#0e1628;
+    --shadow:0 16px 50px rgba(0,0,0,.24);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;
+    background:
+      radial-gradient(circle at 10% 0%, rgba(119,168,255,.13), transparent 30%),
+      radial-gradient(circle at 95% 10%, rgba(116,211,174,.10), transparent 28%),
+      var(--bg);
+    color:var(--text);
+    font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:28px 18px 64px}
+  .hero{
+    display:grid;grid-template-columns:1.35fr .65fr;gap:18px;align-items:stretch;
+  }
+  .card{
+    background:rgba(18,26,45,.93);
+    border:1px solid var(--line);
+    border-radius:20px;
+    box-shadow:var(--shadow);
+  }
+  .hero-main{padding:28px}
+  .eyebrow{color:var(--accent);font-weight:800;letter-spacing:.12em;text-transform:uppercase;font-size:12px}
+  h1{font-size:clamp(34px,6vw,66px);line-height:.95;margin:12px 0 14px;letter-spacing:-.05em}
+  .sub{color:var(--muted);font-size:16px;max-width:720px;line-height:1.55}
+  .hero-side{padding:24px;display:flex;flex-direction:column;justify-content:space-between}
+  .big{font-size:44px;font-weight:900;letter-spacing:-.04em}
+  .muted{color:var(--muted)}
+  .pillrow{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .pill{border:1px solid var(--line);background:var(--panel2);padding:9px 12px;border-radius:999px;font-size:13px}
+  .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:18px}
+  .metric{padding:18px}
+  .metric .v{font-size:26px;font-weight:850;margin-top:5px}
+  .metric .k{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.1em}
+  .section{margin-top:22px}
+  .section-title{display:flex;align-items:end;justify-content:space-between;gap:12px;margin:0 2px 10px}
+  .section-title h2{margin:0;font-size:22px}
+  .section-title p{margin:0;color:var(--muted);font-size:13px}
+  .routine{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;padding:15px}
+  .rbox{background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:14px}
+  .rtime{color:var(--accent2);font-size:12px;font-weight:800}
+  .rname{font-weight:800;margin-top:5px}
+  .rmeta{color:var(--muted);font-size:12px;margin-top:4px;line-height:1.4}
+  .toolbar{
+    position:sticky;top:10px;z-index:10;
+    display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;
+    padding:12px 14px;margin-top:22px;
+    backdrop-filter:blur(14px);background:rgba(18,26,45,.86);
+  }
+  .actions{display:flex;flex-wrap:wrap;gap:8px}
+  button,label.filebtn{
+    border:1px solid var(--line);background:var(--panel2);color:var(--text);
+    border-radius:11px;padding:10px 13px;font-weight:750;cursor:pointer;font:inherit;
+  }
+  button.primary{background:var(--accent);color:#07140f;border-color:transparent}
+  button:hover,label.filebtn:hover{filter:brightness(1.08)}
+  #saveStatus{font-size:13px;color:var(--muted)}
+  .progress-card{padding:18px}
+  .progress-wrap{height:12px;background:#0a1222;border:1px solid var(--line);border-radius:999px;overflow:hidden}
+  #progressBar{height:100%;width:0;background:linear-gradient(90deg,var(--accent2),var(--accent));transition:width .25s}
+  .progress-meta{display:flex;justify-content:space-between;color:var(--muted);font-size:12px;margin-top:8px}
+  canvas{width:100%;height:260px;display:block}
+  .chart-card{padding:18px;margin-top:14px}
+  .table-card{overflow:hidden}
+  .table-scroll{overflow:auto;max-height:66vh}
+  table{border-collapse:separate;border-spacing:0;width:100%;min-width:1080px}
+  th{
+    position:sticky;top:0;background:#18233b;color:#dce6f7;
+    font-size:11px;text-transform:uppercase;letter-spacing:.07em;z-index:2;
+  }
+  th,td{padding:9px 8px;border-bottom:1px solid var(--line);text-align:center}
+  td:first-child,th:first-child{text-align:left}
+  tr.today{outline:2px solid var(--accent2);outline-offset:-2px;background:rgba(119,168,255,.06)}
+  tr.weekend{background:rgba(255,255,255,.015)}
+  tr:hover{background:rgba(255,255,255,.035)}
+  input,select{
+    width:100%;background:var(--input);color:var(--text);border:1px solid #344565;border-radius:8px;
+    padding:8px 7px;font:inherit;min-width:72px;
+  }
+  input:focus,select:focus{outline:2px solid rgba(119,168,255,.45);border-color:var(--accent2)}
+  input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent)}
+  .target{font-weight:800;color:#d7e7ff}
+  .avg{font-weight:800;color:var(--accent)}
+  .good{color:var(--ok)}
+  .bad{color:var(--danger)}
+  .warn{color:var(--warn)}
+  .help{
+    padding:18px 20px;color:var(--muted);line-height:1.6;font-size:14px
+  }
+  .help strong{color:var(--text)}
+  .footer{margin-top:24px;color:var(--muted);font-size:12px;text-align:center}
+  .hidden{display:none!important}
+  .pin-gate{
+    min-height:100vh;display:grid;place-items:center;padding:24px;
+  }
+  .pin-card{
+    width:min(100%,380px);padding:28px;text-align:center;
+    background:rgba(18,26,45,.96);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);
+  }
+  .pin-card h1{font-size:32px;line-height:1.1;margin:10px 0}
+  .pin-form{display:grid;gap:12px;margin-top:22px}
+  .pin-form input{text-align:center;font-size:24px;letter-spacing:.3em;min-height:52px}
+  .pin-error{min-height:20px;margin:0;color:var(--danger);font-size:13px}
+  @media(max-width:900px){
+    .hero{grid-template-columns:1fr}
+    .grid4{grid-template-columns:repeat(2,1fr)}
+    .routine{grid-template-columns:repeat(2,1fr)}
+    .toolbar{position:static}
+  }
+  @media(max-width:560px){
+    .grid4,.routine{grid-template-columns:1fr 1fr}
+    .wrap{padding-left:10px;padding-right:10px}
+    .hero-main,.hero-side{padding:20px}
+  }
+</style>
+</head>
+<body>
+<div id="pinGate" class="pin-gate">
+  <section class="pin-card">
+    <div class="eyebrow">Private health tracker</div>
+    <h1>Enter PIN</h1>
+    <div class="muted">Enter your four-digit PIN to continue.</div>
+    <form id="pinForm" class="pin-form">
+      <input id="pinInput" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="current-password" aria-label="PIN" autofocus required>
+      <button class="primary" type="submit">Open tracker</button>
+      <p id="pinError" class="pin-error" role="alert" aria-live="polite"></p>
+    </form>
+  </section>
+</div>
+<div id="healthContent" hidden>
+<div class="wrap">
+  <section class="hero">
+    <div class="card hero-main">
+      <div class="eyebrow">Fat-loss tracker</div>
+      <h1>86 → 76 kg</h1>
+      <div class="sub">
+        Sep 13 – Nov 30, 2026. The target line is a <strong>trend</strong>, not a score you must hit every morning.
+        Track the inputs; judge progress by the 7-day average.
+      </div>
+      <div class="pillrow">
+        <span class="pill">1,900 kcal/day</span>
+        <span class="pill">150 g protein</span>
+        <span class="pill">12,000 steps</span>
+        <span class="pill">7–8 h sleep</span>
+      </div>
+    </div>
+    <div class="card hero-side">
+      <div>
+        <div class="muted">Latest 7-day average</div>
+        <div id="latestAvg" class="big">—</div>
+      </div>
+      <div>
+        <div class="muted">Estimated progress</div>
+        <div id="progressText" style="font-size:19px;font-weight:800;margin-top:5px">Enter your first weigh-in</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="grid4">
+    <div class="card metric"><div class="k">Calories</div><div class="v">1,900</div><div class="muted">1,850–2,000 acceptable</div></div>
+    <div class="card metric"><div class="k">Protein</div><div class="v">150 g</div><div class="muted">140 g minimum</div></div>
+    <div class="card metric"><div class="k">Steps</div><div class="v">12k</div><div class="muted">10k minimum</div></div>
+    <div class="card metric"><div class="k">Goal pace</div><div class="v">~0.9</div><div class="muted">kg/week stretch pace</div></div>
+  </section>
+
+  <section class="section card routine">
+    <div class="rbox"><div class="rtime">7:00 AM</div><div class="rname">Weigh</div><div class="rmeta">Bathroom first. Before food/water.</div></div>
+    <div class="rbox"><div class="rtime">8:00 AM</div><div class="rname">Breakfast</div><div class="rmeta">~450 kcal · ~40 g protein</div></div>
+    <div class="rbox"><div class="rtime">12:30 PM</div><div class="rname">Lunch</div><div class="rmeta">~500 kcal · ~40 g protein</div></div>
+    <div class="rbox"><div class="rtime">4:00 PM</div><div class="rname">Protein snack</div><div class="rmeta">~250 kcal · ~30 g protein</div></div>
+    <div class="rbox"><div class="rtime">6–7 PM</div><div class="rname">Train</div><div class="rmeta">PPL / cardio · don't “earn” food</div></div>
+    <div class="rbox"><div class="rtime">7:30 PM</div><div class="rname">Dinner</div><div class="rmeta">~550 kcal · ~37–40 g protein</div></div>
+    <div class="rbox"><div class="rtime">11:00 + 5:30</div><div class="rname">Tea × 2</div><div class="rmeta">~75 kcal each; measure milk/sugar</div></div>
+    <div class="rbox"><div class="rtime">10:30 PM</div><div class="rname">Kitchen closed</div><div class="rmeta">No accidental late-night calories</div></div>
+    <div class="rbox"><div class="rtime">12:00 AM</div><div class="rname">Sleep</div><div class="rmeta">Protect recovery and hunger control</div></div>
+    <div class="rbox"><div class="rtime">Every day</div><div class="rname">Walk</div><div class="rmeta">10k floor · 12k target</div></div>
+  </section>
+
+  <section class="card toolbar">
+    <div>
+      <strong>Daily tracker</strong>
+      <span id="saveStatus"> · saved locally in this browser</span>
+    </div>
+    <div class="actions">
+      <button class="primary" id="saveBtn">Save now</button>
+      <button id="todayBtn">Jump to today</button>
+      <button id="exportBtn">Export backup</button>
+      <label class="filebtn">Import backup<input class="hidden" type="file" id="importFile" accept=".json,application/json"></label>
+      <button id="csvBtn">Export CSV</button>
+      <button id="resetBtn">Reset</button>
+    </div>
+  </section>
+
+  <section class="card progress-card section">
+    <div class="section-title">
+      <div><h2>Progress</h2><p>Based on your latest available 7-day average.</p></div>
+      <div id="daysLeft" class="muted"></div>
+    </div>
+    <div class="progress-wrap"><div id="progressBar"></div></div>
+    <div class="progress-meta"><span>86 kg</span><span>76 kg</span></div>
+  </section>
+
+  <section class="card chart-card">
+    <div class="section-title">
+      <div><h2>Weight trend</h2><p>Target trend vs your 7-day rolling average.</p></div>
+    </div>
+    <canvas id="chart" width="1100" height="300"></canvas>
+  </section>
+
+  <section class="section card table-card">
+    <div class="table-scroll">
+      <table id="tracker">
+        <thead>
+          <tr>
+            <th>Date</th><th>Target</th><th>AM weight</th><th>7-day avg</th>
+            <th>Calories</th><th>Protein</th><th>Steps</th><th>Lift</th>
+            <th>Cardio</th><th>Sleep</th><th>Waist</th><th>Notes</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="section card help">
+    <strong>Adjustment rule:</strong> Don't change calories based on one weigh-in. After at least 14 days:
+    if your 7-day average is falling around <strong>0.6–1.0 kg/week</strong>, keep the plan.
+    If you are consistently losing more than ~1 kg/week and recovery/strength is poor, add 100–150 kcal.
+    If you are losing under ~0.5 kg/week for two straight weeks despite accurate tracking, reduce 100–150 kcal
+    <em>or</em> add roughly 2,000 steps/day—not both at once.
+  </section>
+
+  <div class="footer">
+    Data stays on your device using browser localStorage. Export a backup if you switch browsers/devices.
+  </div>
+</div>
+</div>
+
+<script>
+(() => {
+  const ACCESS_KEY = 'healthTrackerUnlocked_v1';
+  const EXPECTED_PIN_HASH = '888df25ae35772424a560c7152a1de794440e0ea5cfee62828333a456a506e05';
+  const gate = document.querySelector('#pinGate');
+  const content = document.querySelector('#healthContent');
+  const form = document.querySelector('#pinForm');
+  const input = document.querySelector('#pinInput');
+  const error = document.querySelector('#pinError');
+
+  const reveal = () => {
+    gate.hidden = true;
+    content.hidden = false;
+  };
+
+  if (sessionStorage.getItem(ACCESS_KEY) === 'true') {
+    reveal();
+  }
+
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+    const bytes = new TextEncoder().encode(input.value);
+    const digest = await crypto.subtle.digest('SHA-256', bytes);
+    const hash = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
+
+    if (hash === EXPECTED_PIN_HASH) {
+      sessionStorage.setItem(ACCESS_KEY, 'true');
+      error.textContent = '';
+      reveal();
+      return;
+    }
+
+    input.value = '';
+    error.textContent = 'Incorrect PIN.';
+    input.focus();
+  });
+})();
+
+(() => {
+  const STORAGE_KEY = 'cutTracker_86to76_v1';
+  const start = new Date('2026-09-13T00:00:00');
+  const end   = new Date('2026-11-30T00:00:00');
+  const startKg = 86, goalKg = 76;
+  const msDay = 86400000;
+  const totalDays = Math.round((end-start)/msDay)+1;
+
+  const $ = s => document.querySelector(s);
+  const tbody = $('#tracker tbody');
+  const saveStatus = $('#saveStatus');
+
+  const days = Array.from({length: totalDays}, (_,i) => {
+    const d = new Date(start.getTime()+i*msDay);
+    const target = startKg + (goalKg-startKg)*(i/(totalDays-1));
+    return {
+      date: d.toISOString().slice(0,10),
+      target: +target.toFixed(2),
+      weight:'', calories:'', protein:'', steps:'', lift:false,
+      cardio:'', sleep:'', waist:'', notes:''
+    };
+  });
+
+  let state = load();
+  if (!state || !Array.isArray(state.days)) state = {days};
+  // Merge in any missing days without overwriting saved data.
+  state.days = days.map(base => ({...base, ...(state.days.find(x => x.date===base.date) || {})}));
+
+  function load(){
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)); }
+    catch { return null; }
+  }
+  function save(show=true){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    if(show){
+      const t = new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
+      saveStatus.textContent = ` · saved ${t}`;
+    }
+  }
+  let saveTimer;
+  function autoSave(){
+    clearTimeout(saveTimer);
+    saveStatus.textContent = ' · saving…';
+    saveTimer = setTimeout(() => save(true), 250);
+  }
+  function rollingAvg(index){
+    const vals = [];
+    for(let i=Math.max(0,index-6); i<=index; i++){
+      const v = parseFloat(state.days[i].weight);
+      if(Number.isFinite(v)) vals.push(v);
+    }
+    if(!vals.length) return null;
+    return vals.reduce((a,b)=>a+b,0)/vals.length;
+  }
+  function esc(s=''){
+    return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+  function fmtDate(iso){
+    const d = new Date(iso+'T00:00:00');
+    return d.toLocaleDateString(undefined,{month:'short',day:'numeric',weekday:'short'});
+  }
+  function valClass(v,min,max){
+    const n=parseFloat(v); if(!Number.isFinite(n)) return '';
+    return (n>=min && n<=max) ? 'good' : (n<min ? 'warn' : 'bad');
+  }
+  function render(){
+    tbody.innerHTML='';
+    const todayISO = new Date().toISOString().slice(0,10);
+
+    state.days.forEach((day,i)=>{
+      const tr=document.createElement('tr');
+      const dow = new Date(day.date+'T00:00:00').getDay();
+      if(day.date===todayISO) tr.classList.add('today');
+      if(dow===0 || dow===6) tr.classList.add('weekend');
+      tr.dataset.date=day.date;
+
+      const avg=rollingAvg(i);
+      tr.innerHTML = `
+        <td><strong>${fmtDate(day.date)}</strong></td>
+        <td class="target">${day.target.toFixed(1)}</td>
+        <td><input data-k="weight" inputmode="decimal" type="number" step="0.1" value="${esc(day.weight)}" placeholder="kg"></td>
+        <td class="avg">${avg ? avg.toFixed(1) : '—'}</td>
+        <td><input data-k="calories" inputmode="numeric" type="number" step="1" value="${esc(day.calories)}" placeholder="1900"></td>
+        <td><input data-k="protein" inputmode="numeric" type="number" step="1" value="${esc(day.protein)}" placeholder="150"></td>
+        <td><input data-k="steps" inputmode="numeric" type="number" step="100" value="${esc(day.steps)}" placeholder="12000"></td>
+        <td><input data-k="lift" type="checkbox" ${day.lift?'checked':''}></td>
+        <td><input data-k="cardio" inputmode="numeric" type="number" step="1" value="${esc(day.cardio)}" placeholder="min"></td>
+        <td><input data-k="sleep" inputmode="decimal" type="number" step="0.1" value="${esc(day.sleep)}" placeholder="hrs"></td>
+        <td><input data-k="waist" inputmode="decimal" type="number" step="0.1" value="${esc(day.waist)}" placeholder="cm"></td>
+        <td><input data-k="notes" type="text" value="${esc(day.notes)}" placeholder="${dow===0?'Weekly review':''}"></td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    updateSummary();
+    drawChart();
+  }
+
+  tbody.addEventListener('input', e=>{
+    const el=e.target, tr=el.closest('tr');
+    if(!tr || !el.dataset.k) return;
+    const day=state.days.find(d=>d.date===tr.dataset.date);
+    day[el.dataset.k] = el.type==='checkbox' ? el.checked : el.value;
+    autoSave();
+    if(el.dataset.k==='weight') {
+      refreshAverages();
+      updateSummary();
+      drawChart();
+    }
+  });
+  tbody.addEventListener('change', e=>{
+    if(e.target.type==='checkbox'){
+      const tr=e.target.closest('tr');
+      const day=state.days.find(d=>d.date===tr.dataset.date);
+      day[e.target.dataset.k]=e.target.checked;
+      autoSave();
+    }
+  });
+
+  function refreshAverages(){
+    [...tbody.rows].forEach((row,i)=>{
+      row.cells[3].textContent = rollingAvg(i)?.toFixed(1) || '—';
+    });
+  }
+
+  function latestAvg(){
+    for(let i=state.days.length-1;i>=0;i--){
+      const a=rollingAvg(i);
+      if(a!==null && state.days.slice(Math.max(0,i-6),i+1).some(d=>d.weight!=='')) return {avg:a,index:i};
+    }
+    return null;
+  }
+
+  function updateSummary(){
+    const latest=latestAvg();
+    if(!latest){
+      $('#latestAvg').textContent='—';
+      $('#progressText').textContent='Enter your first weigh-in';
+      $('#progressBar').style.width='0%';
+    } else {
+      $('#latestAvg').textContent=latest.avg.toFixed(1)+' kg';
+      const pct=Math.max(0,Math.min(100,((startKg-latest.avg)/(startKg-goalKg))*100));
+      $('#progressBar').style.width=pct.toFixed(1)+'%';
+      const lost=startKg-latest.avg;
+      $('#progressText').textContent=`${lost>=0?lost.toFixed(1):'+'+Math.abs(lost).toFixed(1)} kg ${lost>=0?'down':'up'} · ${pct.toFixed(0)}% to goal`;
+    }
+    const now=new Date();
+    const left=Math.ceil((end-now)/msDay);
+    $('#daysLeft').textContent = left>=0 ? `${left} days until Nov 30` : `Goal date passed`;
+  }
+
+  function drawChart(){
+    const c=$('#chart'), ctx=c.getContext('2d');
+    const rect=c.getBoundingClientRect(), dpr=window.devicePixelRatio||1;
+    c.width=Math.max(600,Math.floor(rect.width*dpr));
+    c.height=Math.floor(260*dpr);
+    ctx.scale(dpr,dpr);
+    const W=c.width/dpr,H=c.height/dpr;
+    ctx.clearRect(0,0,W,H);
+
+    const pad={l:46,r:18,t:16,b:28};
+    const minY=75,maxY=87;
+    const x=i=>pad.l+(i/(state.days.length-1))*(W-pad.l-pad.r);
+    const y=v=>pad.t+((maxY-v)/(maxY-minY))*(H-pad.t-pad.b);
+
+    ctx.font='11px system-ui';
+    ctx.strokeStyle='#283654'; ctx.fillStyle='#9aa7bd'; ctx.lineWidth=1;
+    [76,78,80,82,84,86].forEach(v=>{
+      ctx.beginPath();ctx.moveTo(pad.l,y(v));ctx.lineTo(W-pad.r,y(v));ctx.stroke();
+      ctx.fillText(v+' kg',4,y(v)+4);
+    });
+    const ticks=[0,17,32,48,63,78];
+    ticks.forEach(i=>{
+      const d=new Date(state.days[i].date+'T00:00:00');
+      const label=d.toLocaleDateString(undefined,{month:'short',day:'numeric'});
+      ctx.fillText(label,x(i)-18,H-7);
+    });
+
+    // Target line
+    ctx.strokeStyle='#77a8ff';ctx.lineWidth=2;ctx.setLineDash([6,6]);ctx.beginPath();
+    state.days.forEach((d,i)=>{ const X=x(i),Y=y(d.target); i?ctx.lineTo(X,Y):ctx.moveTo(X,Y);});
+    ctx.stroke();ctx.setLineDash([]);
+
+    // Rolling average line
+    let started=false;
+    ctx.strokeStyle='#74d3ae';ctx.lineWidth=3;ctx.beginPath();
+    state.days.forEach((d,i)=>{
+      const a=rollingAvg(i);
+      if(a===null) return;
+      const X=x(i),Y=y(a);
+      if(!started){ctx.moveTo(X,Y);started=true}else ctx.lineTo(X,Y);
+    });
+    if(started) ctx.stroke();
+
+    ctx.fillStyle='#77a8ff';ctx.fillRect(W-230,10,16,3);ctx.fillStyle='#cdd8eb';ctx.fillText('Target trend',W-208,15);
+    ctx.fillStyle='#74d3ae';ctx.fillRect(W-122,10,16,3);ctx.fillStyle='#cdd8eb';ctx.fillText('7-day avg',W-100,15);
+  }
+
+  $('#saveBtn').addEventListener('click',()=>save(true));
+  $('#todayBtn').addEventListener('click',()=>{
+    const todayISO=new Date().toISOString().slice(0,10);
+    const row=tbody.querySelector(`tr[data-date="${todayISO}"]`) || tbody.querySelector('tr');
+    row?.scrollIntoView({behavior:'smooth',block:'center'});
+  });
+
+  function download(name,content,type){
+    const blob=new Blob([content],{type});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob); a.download=name; a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  }
+  $('#exportBtn').addEventListener('click',()=>{
+    download('cut-tracker-backup.json',JSON.stringify(state,null,2),'application/json');
+  });
+  $('#csvBtn').addEventListener('click',()=>{
+    const header=['Date','Target kg','AM weight kg','7-day avg kg','Calories','Protein g','Steps','Lift','Cardio min','Sleep hrs','Waist cm','Notes'];
+    const rows=state.days.map((d,i)=>[
+      d.date,d.target.toFixed(2),d.weight,rollingAvg(i)?.toFixed(2)||'',d.calories,d.protein,d.steps,d.lift?'Y':'N',d.cardio,d.sleep,d.waist,d.notes
+    ]);
+    const csv=[header,...rows].map(r=>r.map(v=>`"${String(v??'').replaceAll('"','""')}"`).join(',')).join('\n');
+    download('cut-tracker.csv',csv,'text/csv');
+  });
+  $('#importFile').addEventListener('change',async e=>{
+    const f=e.target.files?.[0]; if(!f) return;
+    try{
+      const imported=JSON.parse(await f.text());
+      if(!Array.isArray(imported.days)) throw new Error('Invalid backup');
+      state=imported; save(); render(); alert('Backup imported.');
+    }catch(err){ alert('Could not import that file.'); }
+    e.target.value='';
+  });
+  $('#resetBtn').addEventListener('click',()=>{
+    if(confirm('Delete all saved entries from this browser?')){
+      localStorage.removeItem(STORAGE_KEY);
+      state={days:days.map(x=>({...x}))};
+      render();
+      saveStatus.textContent=' · reset';
+    }
+  });
+  window.addEventListener('resize',()=>requestAnimationFrame(drawChart));
+
+  render();
+  save(false);
+})();
+</script>
+</body>
+</html>
