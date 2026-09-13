@@ -58,11 +58,15 @@
   .section-title{display:flex;align-items:end;justify-content:space-between;gap:12px;margin:0 2px 10px}
   .section-title h2{margin:0;font-size:22px}
   .section-title p{margin:0;color:var(--muted);font-size:13px}
-  .routine{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;padding:15px}
-  .rbox{background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:14px}
-  .rtime{color:var(--accent2);font-size:12px;font-weight:800}
-  .rname{font-weight:800;margin-top:5px}
-  .rmeta{color:var(--muted);font-size:12px;margin-top:4px;line-height:1.4}
+  .routine{padding:8px 20px}
+  .rbox{display:grid;grid-template-columns:132px 1fr;gap:18px;align-items:center;padding:16px 4px;border-bottom:1px solid var(--line)}
+  .rbox:last-child{border-bottom:0}
+  .rtime{color:var(--accent2);font-size:12px;font-weight:800;letter-spacing:.02em}
+  .rname{font-weight:850;font-size:15px}
+  .rmeta{color:var(--muted);font-size:13px;margin-top:3px;line-height:1.45}
+  .training{margin:8px -4px;padding:16px 12px;border:1px solid rgba(119,168,255,.38);border-radius:14px;background:rgba(119,168,255,.08)}
+  .daychips{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+  .daychip{padding:6px 9px;border-radius:999px;background:#223452;color:#dce8ff;font-size:12px;font-weight:750}
   .toolbar{
     position:sticky;top:10px;z-index:10;
     display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;
@@ -76,12 +80,14 @@
   }
   button.primary{background:var(--accent);color:#07140f;border-color:transparent}
   button:hover,label.filebtn:hover{filter:brightness(1.08)}
+  button:focus-visible,label.filebtn:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid rgba(119,168,255,.72);outline-offset:2px}
   #saveStatus{font-size:13px;color:var(--muted)}
   .progress-card{padding:18px}
   .progress-wrap{height:12px;background:#0a1222;border:1px solid var(--line);border-radius:999px;overflow:hidden}
   #progressBar{height:100%;width:0;background:linear-gradient(90deg,var(--accent2),var(--accent));transition:width .25s}
   .progress-meta{display:flex;justify-content:space-between;color:var(--muted);font-size:12px;margin-top:8px}
-  canvas{width:100%;height:260px;display:block}
+  .chart-scroll{overflow-x:auto;padding-bottom:4px;scrollbar-color:var(--line) transparent}
+  canvas{width:100%;min-width:800px;height:310px;display:block}
   .chart-card{padding:18px;margin-top:14px}
   .table-card{overflow:hidden}
   .table-scroll{overflow:auto;max-height:66vh}
@@ -127,13 +133,20 @@
   @media(max-width:900px){
     .hero{grid-template-columns:1fr}
     .grid4{grid-template-columns:repeat(2,1fr)}
-    .routine{grid-template-columns:repeat(2,1fr)}
     .toolbar{position:static}
   }
   @media(max-width:560px){
-    .grid4,.routine{grid-template-columns:1fr 1fr}
+    .grid4{grid-template-columns:1fr 1fr}
     .wrap{padding-left:10px;padding-right:10px}
     .hero-main,.hero-side{padding:20px}
+    .routine{padding:5px 16px}
+    .rbox{grid-template-columns:1fr;gap:5px;padding:15px 2px}
+    .training{padding:15px 12px}
+    button,label.filebtn{min-height:44px}
+  }
+  @media(prefers-reduced-motion:reduce){
+    html{scroll-behavior:auto}
+    #progressBar{transition:none}
   }
 </style>
 </head>
@@ -157,8 +170,8 @@
       <div class="eyebrow">Fat-loss tracker</div>
       <h1>86 → 76 kg</h1>
       <div class="sub">
-        Sep 13 – Nov 30, 2026. The target line is a <strong>trend</strong>, not a score you must hit every morning.
-        Track the inputs; judge progress by the 7-day average.
+        Sep 13 – Nov 30, 2026. Weekly guideposts show the potential trend—not a score you must hit every morning.
+        Track the inputs and judge progress by the 7-day average.
       </div>
       <div class="pillrow">
         <span class="pill">1,900 kcal/day</span>
@@ -186,17 +199,24 @@
     <div class="card metric"><div class="k">Goal pace</div><div class="v">~0.9</div><div class="muted">kg/week stretch pace</div></div>
   </section>
 
-  <section class="section card routine">
-    <div class="rbox"><div class="rtime">7:00 AM</div><div class="rname">Weigh</div><div class="rmeta">Bathroom first. Before food/water.</div></div>
-    <div class="rbox"><div class="rtime">8:00 AM</div><div class="rname">Breakfast</div><div class="rmeta">~450 kcal · ~40 g protein</div></div>
-    <div class="rbox"><div class="rtime">12:30 PM</div><div class="rname">Lunch</div><div class="rmeta">~500 kcal · ~40 g protein</div></div>
-    <div class="rbox"><div class="rtime">4:00 PM</div><div class="rname">Protein snack</div><div class="rmeta">~250 kcal · ~30 g protein</div></div>
-    <div class="rbox"><div class="rtime">6–7 PM</div><div class="rname">Train</div><div class="rmeta">PPL / cardio · don't “earn” food</div></div>
-    <div class="rbox"><div class="rtime">7:30 PM</div><div class="rname">Dinner</div><div class="rmeta">~550 kcal · ~37–40 g protein</div></div>
-    <div class="rbox"><div class="rtime">11:00 + 5:30</div><div class="rname">Tea × 2</div><div class="rmeta">~75 kcal each; measure milk/sugar</div></div>
-    <div class="rbox"><div class="rtime">10:30 PM</div><div class="rname">Kitchen closed</div><div class="rmeta">No accidental late-night calories</div></div>
-    <div class="rbox"><div class="rtime">12:00 AM</div><div class="rname">Sleep</div><div class="rmeta">Protect recovery and hunger control</div></div>
-    <div class="rbox"><div class="rtime">Every day</div><div class="rname">Walk</div><div class="rmeta">10k floor · 12k target</div></div>
+  <section class="section">
+    <div class="section-title">
+      <div><h2>Daily rhythm</h2><p>A simple sequence to make the plan easy to follow.</p></div>
+    </div>
+    <div class="card routine">
+      <div class="rbox"><div class="rtime">On waking</div><div><div class="rname">Weigh</div><div class="rmeta">Bathroom first—before tea, food, or water.</div></div></div>
+      <div class="rbox"><div class="rtime"><time datetime="07:00">7:00 AM</time></div><div><div class="rname">Morning tea</div><div class="rmeta">Measure milk and sugar · ~75 kcal.</div></div></div>
+      <div class="rbox"><div class="rtime">Morning</div><div><div class="rname">Walk</div><div class="rmeta">10k floor · 12k daily target.</div></div></div>
+      <div class="rbox"><div class="rtime"><time datetime="08:00">8:00 AM</time></div><div><div class="rname">Breakfast</div><div class="rmeta">~450 kcal · ~40 g protein.</div></div></div>
+      <div class="rbox training"><div class="rtime"><time datetime="12:00">12:00–1:00 PM</time></div><div><div class="rname">Push · Pull · Legs</div><div class="rmeta">Three focused strength sessions each week.</div><div class="daychips"><span class="daychip">Mon · Push</span><span class="daychip">Wed · Pull</span><span class="daychip">Fri · Legs</span></div></div></div>
+      <div class="rbox"><div class="rtime"><time datetime="13:00">1:00 PM</time></div><div><div class="rname">Lunch</div><div class="rmeta">~500 kcal · ~40 g protein.</div></div></div>
+      <div class="rbox"><div class="rtime">Afternoon</div><div><div class="rname">Black coffee</div><div class="rmeta">Keep it black or measure any additions.</div></div></div>
+      <div class="rbox"><div class="rtime"><time datetime="16:00">4:00 PM</time></div><div><div class="rname">Protein snack</div><div class="rmeta">~250 kcal · ~30 g protein.</div></div></div>
+      <div class="rbox"><div class="rtime"><time datetime="17:30">5:30 PM</time></div><div><div class="rname">Evening tea</div><div class="rmeta">Measure milk and sugar · ~75 kcal.</div></div></div>
+      <div class="rbox"><div class="rtime"><time datetime="19:30">7:30 PM</time></div><div><div class="rname">Dinner</div><div class="rmeta">~550 kcal · ~37–40 g protein.</div></div></div>
+      <div class="rbox"><div class="rtime"><time datetime="22:30">10:30 PM</time></div><div><div class="rname">Kitchen closed</div><div class="rmeta">Next meal is breakfast.</div></div></div>
+      <div class="rbox"><div class="rtime"><time datetime="23:30">By 11:30 PM</time></div><div><div class="rname">Sleep</div><div class="rmeta">Protect recovery and hunger control.</div></div></div>
+    </div>
   </section>
 
   <section class="card toolbar">
@@ -225,9 +245,11 @@
 
   <section class="card chart-card">
     <div class="section-title">
-      <div><h2>Weight trend</h2><p>Target trend vs your 7-day rolling average.</p></div>
+      <div><h2>Weight trend</h2><p>Your 7-day average compared with weekly guideposts.</p></div>
     </div>
-    <canvas id="chart" width="1100" height="300"></canvas>
+    <div class="chart-scroll">
+      <canvas id="chart" width="1100" height="310" role="img" aria-label="Projected weekly weight guideposts from 86 to 76 kilograms. Your seven-day average appears after weigh-ins are entered.">Your weekly projected weights run from 86 kilograms on September 13 to 76 kilograms on November 30.</canvas>
+    </div>
   </section>
 
   <section class="section card table-card">
@@ -451,16 +473,21 @@
   function drawChart(){
     const c=$('#chart'), ctx=c.getContext('2d');
     const rect=c.getBoundingClientRect(), dpr=window.devicePixelRatio||1;
-    c.width=Math.max(600,Math.floor(rect.width*dpr));
-    c.height=Math.floor(260*dpr);
+    c.width=Math.max(800,Math.floor(rect.width*dpr));
+    c.height=Math.floor(310*dpr);
     ctx.scale(dpr,dpr);
     const W=c.width/dpr,H=c.height/dpr;
     ctx.clearRect(0,0,W,H);
 
-    const pad={l:46,r:18,t:16,b:28};
+    const pad={l:50,r:20,t:34,b:42};
     const minY=75,maxY=87;
     const x=i=>pad.l+(i/(state.days.length-1))*(W-pad.l-pad.r);
     const y=v=>pad.t+((maxY-v)/(maxY-minY))*(H-pad.t-pad.b);
+    const milestones=[];
+    for(let i=0;i<state.days.length;i+=7) milestones.push(i);
+    const lastIndex=state.days.length-1;
+    if(lastIndex-milestones.at(-1)<4) milestones[milestones.length-1]=lastIndex;
+    else if(milestones.at(-1)!==lastIndex) milestones.push(lastIndex);
 
     ctx.font='11px system-ui';
     ctx.strokeStyle='#283654'; ctx.fillStyle='#9aa7bd'; ctx.lineWidth=1;
@@ -468,17 +495,43 @@
       ctx.beginPath();ctx.moveTo(pad.l,y(v));ctx.lineTo(W-pad.r,y(v));ctx.stroke();
       ctx.fillText(v+' kg',4,y(v)+4);
     });
-    const ticks=[0,17,32,48,63,78];
-    ticks.forEach(i=>{
+
+    // Weekly guide rails and dates
+    ctx.font='10px system-ui';
+    milestones.forEach(i=>{
+      const X=x(i);
+      ctx.strokeStyle='rgba(119,168,255,.13)';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(X,pad.t);ctx.lineTo(X,H-pad.b);ctx.stroke();
       const d=new Date(state.days[i].date+'T00:00:00');
       const label=d.toLocaleDateString(undefined,{month:'short',day:'numeric'});
-      ctx.fillText(label,x(i)-18,H-7);
+      ctx.fillStyle='#9aa7bd';ctx.textAlign='center';
+      ctx.fillText(label,X,H-13);
     });
 
-    // Target line
-    ctx.strokeStyle='#77a8ff';ctx.lineWidth=2;ctx.setLineDash([6,6]);ctx.beginPath();
+    // Projected trend line
+    ctx.strokeStyle='#77a8ff';ctx.lineWidth=2;ctx.setLineDash([]);ctx.beginPath();
     state.days.forEach((d,i)=>{ const X=x(i),Y=y(d.target); i?ctx.lineTo(X,Y):ctx.moveTo(X,Y);});
-    ctx.stroke();ctx.setLineDash([]);
+    ctx.stroke();
+
+    // Direct weekly weight labels
+    ctx.font='600 11px system-ui';
+    milestones.forEach((i,milestoneIndex)=>{
+      const X=x(i),Y=y(state.days[i].target);
+      const label=`${state.days[i].target.toFixed(1)} kg`;
+      const boxW=52,boxH=20;
+      const boxX=Math.max(pad.l-boxW/2,Math.min(W-pad.r-boxW, X-boxW/2));
+      const boxY=milestoneIndex%2===0 ? Y-28 : Y+9;
+
+      ctx.fillStyle='#77a8ff';
+      ctx.beginPath();ctx.arc(X,Y,4,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='rgba(11,16,32,.94)';
+      ctx.beginPath();
+      ctx.roundRect(boxX,boxY,boxW,boxH,7);
+      ctx.fill();
+      ctx.strokeStyle='rgba(119,168,255,.55)';ctx.lineWidth=1;ctx.stroke();
+      ctx.fillStyle='#dce8ff';ctx.textAlign='center';
+      ctx.fillText(label,boxX+boxW/2,boxY+14);
+    });
 
     // Rolling average line
     let started=false;
@@ -491,8 +544,14 @@
     });
     if(started) ctx.stroke();
 
-    ctx.fillStyle='#77a8ff';ctx.fillRect(W-230,10,16,3);ctx.fillStyle='#cdd8eb';ctx.fillText('Target trend',W-208,15);
-    ctx.fillStyle='#74d3ae';ctx.fillRect(W-122,10,16,3);ctx.fillStyle='#cdd8eb';ctx.fillText('7-day avg',W-100,15);
+    ctx.textAlign='left';ctx.font='11px system-ui';
+    ctx.fillStyle='#77a8ff';ctx.beginPath();ctx.arc(W-226,11,4,0,Math.PI*2);ctx.fill();ctx.fillStyle='#cdd8eb';ctx.fillText('Weekly guide',W-216,15);
+    ctx.fillStyle='#74d3ae';ctx.fillRect(W-108,9,16,3);ctx.fillStyle='#cdd8eb';ctx.fillText('7-day avg',W-86,15);
+
+    const latest=latestAvg();
+    const nextMilestone=milestones.find(i=>state.days[i].date>=new Date().toISOString().slice(0,10)) ?? lastIndex;
+    const nextDate=new Date(state.days[nextMilestone].date+'T00:00:00').toLocaleDateString(undefined,{month:'long',day:'numeric'});
+    c.setAttribute('aria-label',`Projected weekly weight guideposts from 86 to 76 kilograms. Next guidepost: ${state.days[nextMilestone].target.toFixed(1)} kilograms on ${nextDate}.${latest?` Current seven-day average: ${latest.avg.toFixed(1)} kilograms.`:' Enter weigh-ins to show your seven-day average.'}`);
   }
 
   $('#saveBtn').addEventListener('click',()=>save(true));
