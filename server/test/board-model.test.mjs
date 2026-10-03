@@ -80,6 +80,8 @@ test('account gate and authenticated Home and Help views are present without the
   assert.match(html, /id="createForm"/)
   assert.match(html, /data-view="home"/)
   assert.match(html, /data-view="help"/)
+  assert.match(html, /styles\.css\?v=[^"']+/)
+  assert.match(html, /app\.js\?v=[^"']+/)
   assert.doesNotMatch(html, /Four-digit PIN|id="pin"/)
   assert.match(script, /function renderHome\(/)
   assert.match(script, /function renderHelp\(/)
