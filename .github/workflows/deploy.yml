@@ -162,6 +162,9 @@ jobs:
               exit 1
             fi
 
+            stale_api="$(docker ps -aq --filter label=com.docker.compose.project=appsdashboard --filter label=com.docker.compose.service=api)"
+            if [ -n "$stale_api" ]; then docker rm -f $stale_api >/dev/null; fi
+            docker rm -f appsdashboard-api >/dev/null 2>&1 || true
             $COMPOSE -f docker-compose.production.yml up -d --build api
             for attempt in $(seq 1 30); do
               status="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' appsdashboard-api 2>/dev/null || true)"
