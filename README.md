@@ -4,6 +4,22 @@
 
 A clean, ready-to-use web application template built with Vite. Perfect for quickly starting new projects with modern development tools and deployment configurations.
 
+## Persotodo
+
+Persotodo is available at `/persotodo/`. It uses a small Node API and a
+dedicated `persotodo` database in the VPS's existing PostgreSQL service. The
+API creates the `persotodo_items` table idempotently on startup. PIN validation
+is server-side through `PERSOTODO_PIN`; production supplies it from the GitHub
+Actions secret of the same name.
+
+Run the API tests with:
+
+```bash
+cd server
+npm ci
+npm test
+```
+
 ## ✨ Features
 
 - ⚡ **Vite** - Fast development server with hot module replacement

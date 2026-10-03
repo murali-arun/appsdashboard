@@ -43,6 +43,12 @@ const apps = [
     url: 'https://outfit.anmious.cloud',
     icon: '👗',
     description: 'Design coordinated bride & groom outfits with layered SVG avatars'
+  },
+  {
+    name: 'Persotodo',
+    url: '/persotodo/',
+    icon: '✓',
+    description: 'A private, focused personal task list'
   }
 ]
 

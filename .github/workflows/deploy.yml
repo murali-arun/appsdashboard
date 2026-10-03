@@ -3,20 +3,25 @@ name: Deploy to VPS via Docker
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
+    branches: [main]
     paths:
       - 'src/**'
       - 'public/**'
+      - 'server/**'
       - 'index.html'
+      - 'nginx.conf'
+      - 'docker-compose.production.yml'
       - 'vite.config.js'
       - 'package.json'
+      - 'package-lock.json'
       - '.github/workflows/deploy.yml'
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
+    permissions:
+      contents: read
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -24,144 +29,153 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            server/package-lock.json
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build
-        run: npm run build
-
-      - name: Verify dist/ exists
+      - name: Build dashboard
         run: |
-          ls -la
-          ls -la dist
+          npm ci
+          npm run build
 
-      # Safe debug (does NOT print key)
-      - name: Debug deploy inputs (safe)
-        shell: bash
+      - name: Test Persotodo API
+        working-directory: server
+        run: |
+          npm ci
+          npm test
+
+      - name: Verify release files
+        run: |
+          test -f dist/index.html
+          test -f dist/persotodo/index.html
+          test -f server/Dockerfile
+
+      - name: Validate deployment secrets
         env:
-          HOST: ${{ secrets.VPS_HOST }}
-          USER: ${{ secrets.VPS_USERNAME }}
-          KEY:  ${{ secrets.VPS_SSH_KEY }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USERNAME: ${{ secrets.VPS_USERNAME }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          PERSOTODO_PIN: ${{ secrets.PERSOTODO_PIN }}
         run: |
-          echo "HOST=$HOST"
-          echo "USER=$USER"
-          if [ -z "$KEY" ]; then
-            echo "SSH KEY: NOT SET"
-          else
-            echo "SSH KEY: SET (length=${#KEY})"
-          fi
-          echo "PORT=${{ secrets.VPS_PORT || 22 }}"
+          for name in VPS_HOST VPS_USERNAME VPS_SSH_KEY PERSOTODO_PIN; do
+            test -n "${!name}" || { echo "Missing required secret: ${name}"; exit 1; }
+          done
+          printf '%s' "$PERSOTODO_PIN" | grep -Eq '^[0-9]{4}$' || {
+            echo "PERSOTODO_PIN must contain exactly four digits"
+            exit 1
+          }
 
-      # Ensure target directory exists on VPS
-      - name: Ensure target dir exists
+      - name: Ensure target directory exists
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || 22 }}
-          script: |
-            mkdir -p /opt/appsdashboard
-            ls -la /opt/appsdashboard
+          script: mkdir -p /opt/appsdashboard/dist /opt/appsdashboard/server
 
-      - name: Upload dist/ to VPS via SCP (over SSH)
+      - name: Upload dashboard build
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || 22 }}
-          source: "dist/*"
-          target: "/opt/appsdashboard/"
+          source: 'dist/*'
+          target: /opt/appsdashboard/dist/
           strip_components: 1
           overwrite: true
 
-      - name: Deploy and restart Docker container
-        uses: appleboy/ssh-action@v1.2.0
+      - name: Upload Persotodo runtime
+        uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || 22 }}
+          source: 'server/Dockerfile,server/.dockerignore,server/package.json,server/package-lock.json,server/src/**,nginx.conf,docker-compose.production.yml'
+          target: /opt/appsdashboard/
+          overwrite: true
+
+      - name: Provision database and deploy
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          PERSOTODO_PIN: ${{ secrets.PERSOTODO_PIN }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 20m
+          envs: PERSOTODO_PIN
           script: |
-            # Create nginx config
-            cat > /opt/appsdashboard-nginx.conf << 'EOF'
-            server {
-                listen 80;
-                server_name localhost;
-                absolute_redirect off;
-                
-                root /usr/share/nginx/html;
-                index index.html;
-                
-                # Gzip compression
-                gzip on;
-                gzip_vary on;
-                gzip_min_length 1024;
-                gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml+rss application/json application/javascript;
+            set -eu
+            umask 077
+            cd /opt/appsdashboard
 
-                # Canonical route for the private health tracker
-                location = /health {
-                    return 301 /health/;
-                }
-                
-                # SPA routing - serve index.html for all routes
-                location / {
-                    try_files $uri $uri/ /index.html;
-                }
-                
-                # Security headers
-                add_header X-Frame-Options "SAMEORIGIN" always;
-                add_header X-Content-Type-Options "nosniff" always;
-                add_header X-XSS-Protection "1; mode=block" always;
-                
-                # Cache static assets
-                location ~* \.(jpg|jpeg|png|gif|ico|svg|webp)$ {
-                    expires 1y;
-                    add_header Cache-Control "public, immutable";
-                }
-                
-                location ~* \.(css|js|woff|woff2|ttf|eot)$ {
-                    expires 1y;
-                    add_header Cache-Control "public, immutable";
-                }
-                
-                # Deny access to hidden files
-                location ~ /\. {
-                    deny all;
-                    access_log off;
-                    log_not_found off;
-                }
-            }
+            docker inspect litellm_db >/dev/null
+            docker network inspect litellm_default >/dev/null
+
+            DB_ADMIN_USER="$(docker inspect litellm_db --format '{{range .Config.Env}}{{println .}}{{end}}' | sed -n 's/^POSTGRES_USER=//p' | head -n 1)"
+            DB_ADMIN_PASSWORD="$(docker inspect litellm_db --format '{{range .Config.Env}}{{println .}}{{end}}' | sed -n 's/^POSTGRES_PASSWORD=//p' | head -n 1)"
+            DB_ADMIN_DATABASE="$(docker inspect litellm_db --format '{{range .Config.Env}}{{println .}}{{end}}' | sed -n 's/^POSTGRES_DB=//p' | head -n 1)"
+            test -n "$DB_ADMIN_USER" && test -n "$DB_ADMIN_PASSWORD" && test -n "$DB_ADMIN_DATABASE"
+
+            APP_DB_PASSWORD="$(sed -n 's/^PERSOTODO_DB_PASSWORD=//p' .env 2>/dev/null | head -n 1 || true)"
+            SESSION_SECRET="$(sed -n 's/^PERSOTODO_SESSION_SECRET=//p' .env 2>/dev/null | head -n 1 || true)"
+            if [ -z "$APP_DB_PASSWORD" ]; then APP_DB_PASSWORD="$(openssl rand -hex 32)"; fi
+            if [ -z "$SESSION_SECRET" ]; then SESSION_SECRET="$(openssl rand -hex 48)"; fi
+
+            docker exec -i \
+              -e PGPASSWORD="$DB_ADMIN_PASSWORD" \
+              litellm_db psql -v ON_ERROR_STOP=1 \
+              -v "app_password=$APP_DB_PASSWORD" \
+              -U "$DB_ADMIN_USER" -d "$DB_ADMIN_DATABASE" <<'SQL'
+            SELECT format('CREATE ROLE persotodo LOGIN PASSWORD %L', :'app_password')
+            WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'persotodo') \gexec
+            SELECT format('ALTER ROLE persotodo LOGIN PASSWORD %L', :'app_password') \gexec
+            SQL
+
+            if ! docker exec -e PGPASSWORD="$DB_ADMIN_PASSWORD" litellm_db \
+              psql -U "$DB_ADMIN_USER" -d "$DB_ADMIN_DATABASE" -Atc \
+              "SELECT 1 FROM pg_database WHERE datname = 'persotodo'" | grep -qx 1; then
+              docker exec -e PGPASSWORD="$DB_ADMIN_PASSWORD" litellm_db \
+                createdb -U "$DB_ADMIN_USER" -O persotodo persotodo
+            fi
+
+            cat > .env <<EOF
+            DATABASE_URL=postgresql://persotodo:$APP_DB_PASSWORD@litellm_db:5432/persotodo
+            PERSOTODO_PIN=$PERSOTODO_PIN
+            PERSOTODO_SESSION_SECRET=$SESSION_SECRET
+            PERSOTODO_DB_PASSWORD=$APP_DB_PASSWORD
             EOF
+            chmod 600 .env
 
-            # Create docker-compose file
-            cat > /opt/appsdashboard-compose.yml << 'EOF'
-            version: '3.8'
+            if docker compose version >/dev/null 2>&1; then
+              COMPOSE='docker compose'
+            elif docker-compose version >/dev/null 2>&1; then
+              COMPOSE='docker-compose'
+            else
+              echo 'Docker Compose is not installed'
+              exit 1
+            fi
 
-            services:
-              appsdashboard:
-                image: nginx:alpine
-                container_name: appsdashboard
-                volumes:
-                  - /opt/appsdashboard:/usr/share/nginx/html:ro
-                  - /opt/appsdashboard-nginx.conf:/etc/nginx/conf.d/default.conf:ro
-                networks:
-                  - npm_default
-                restart: unless-stopped
+            $COMPOSE -f docker-compose.production.yml up -d --build api
+            for attempt in $(seq 1 30); do
+              status="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' appsdashboard-api 2>/dev/null || true)"
+              if [ "$status" = healthy ]; then break; fi
+              if [ "$attempt" = 30 ]; then
+                docker logs --tail=100 appsdashboard-api
+                exit 1
+              fi
+              sleep 2
+            done
 
-            networks:
-              npm_default:
-                external: true
-            EOF
-
-            # Start or restart the container
-            cd /opt
-            docker-compose -f appsdashboard-compose.yml down || true
-            docker-compose -f appsdashboard-compose.yml up -d
-            
-            # Verify container is running
-            docker ps | grep appsdashboard
+            docker rm -f appsdashboard >/dev/null 2>&1 || true
+            $COMPOSE -f docker-compose.production.yml up -d dashboard
+            docker exec appsdashboard nginx -t
+            docker exec appsdashboard wget -qO- http://127.0.0.1/persotodo/ | grep -q Persotodo
+            docker exec appsdashboard-api node -e "fetch('http://127.0.0.1:3000/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+            $COMPOSE -f docker-compose.production.yml ps
