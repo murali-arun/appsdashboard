@@ -45,10 +45,10 @@ const apps = [
     description: 'Design coordinated bride & groom outfits with layered SVG avatars'
   },
   {
-    name: 'Persotodo',
+    name: 'Clearspace',
     url: '/persotodo/',
     icon: '✓',
-    description: 'A private, focused personal task list'
+    description: 'A calm personal planner for priorities, capacity, and workflow'
   }
 ]
 

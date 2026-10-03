@@ -3,9 +3,13 @@ import { once } from 'node:events'
 import { after, before, test } from 'node:test'
 
 import { createApiServer } from '../src/app.mjs'
+import { createCard, createEmptyBoard } from '../src/board-model.mjs'
 
 const todos = []
 let nextId = 1
+let boardState = { revision: 1, board: createEmptyBoard(), updatedAt: new Date() }
+const revisions = []
+const saveRequests = new Map()
 const repository = {
   async health() {},
   async list() { return [...todos] },
@@ -25,6 +29,24 @@ const repository = {
     if (index === -1) return false
     todos.splice(index, 1)
     return true
+  },
+  async loadBoard() { return structuredClone(boardState) },
+  async saveBoard({ board, expectedRevision, requestId, contentHash }) {
+    if (saveRequests.has(requestId)) {
+      const saved = saveRequests.get(requestId)
+      return saved.contentHash === contentHash ? { revision: saved.revision, replayed: true } : { requestConflict: true }
+    }
+    if (expectedRevision !== boardState.revision) return { stale: true, revision: boardState.revision }
+    revisions.unshift({ revision: boardState.revision, board: structuredClone(boardState.board), savedAt: new Date() })
+    boardState = { revision: boardState.revision + 1, board: structuredClone(board), updatedAt: new Date() }
+    saveRequests.set(requestId, { contentHash, revision: boardState.revision })
+    return { revision: boardState.revision, replayed: false }
+  },
+  async listRevisions() {
+    return revisions.map(item => ({ revision: item.revision, savedAt: item.savedAt, cardCount: item.board.cards.length }))
+  },
+  async getRevision(revision) {
+    return revisions.find(item => item.revision === revision) ?? null
   }
 }
 
@@ -108,4 +130,44 @@ test('authenticated client can create, update, and remove a todo', async () => {
     headers: { Cookie: cookie }
   })
   assert.equal(removed.status, 200)
+})
+
+test('board API uses ETags, rejects stale saves, and safely replays a lost response', async () => {
+  const loaded = await fetch(`${baseUrl}/api/persotodo/board`, { headers: { Cookie: cookie } })
+  assert.equal(loaded.status, 200)
+  assert.equal(loaded.headers.get('etag'), '"1"')
+  const { board } = await loaded.json()
+  board.cards.push(createCard(board, { title: 'Revision checked task' }))
+
+  const headers = { Cookie: cookie, 'Content-Type': 'application/json', 'If-Match': '"1"', 'X-Request-ID': 'request-0001' }
+  const saved = await fetch(`${baseUrl}/api/persotodo/board`, { method: 'PUT', headers, body: JSON.stringify({ board }) })
+  assert.equal(saved.status, 200)
+  assert.equal((await saved.json()).revision, 2)
+
+  const replayed = await fetch(`${baseUrl}/api/persotodo/board`, { method: 'PUT', headers, body: JSON.stringify({ board }) })
+  assert.equal(replayed.status, 200)
+  assert.equal((await replayed.json()).replayed, true)
+
+  const staleBoard = structuredClone(board)
+  staleBoard.meta.updatedAt = new Date().toISOString()
+  const stale = await fetch(`${baseUrl}/api/persotodo/board`, {
+    method: 'PUT',
+    headers: { Cookie: cookie, 'Content-Type': 'application/json', 'If-Match': '"1"', 'X-Request-ID': 'request-0002' },
+    body: JSON.stringify({ board: staleBoard })
+  })
+  assert.equal(stale.status, 412)
+})
+
+test('board API rejects invalid boards and exposes saved revisions', async () => {
+  const invalid = structuredClone(boardState.board)
+  invalid.cards[0].title = ''
+  const rejected = await fetch(`${baseUrl}/api/persotodo/board`, {
+    method: 'PUT',
+    headers: { Cookie: cookie, 'Content-Type': 'application/json', 'If-Match': '"2"', 'X-Request-ID': 'request-0003' },
+    body: JSON.stringify({ board: invalid })
+  })
+  assert.equal(rejected.status, 422)
+  const history = await fetch(`${baseUrl}/api/persotodo/revisions`, { headers: { Cookie: cookie } })
+  assert.equal(history.status, 200)
+  assert.equal((await history.json()).revisions[0].revision, 1)
 })

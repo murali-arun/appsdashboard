@@ -1,9 +1,13 @@
 import { createHmac, createHash, timingSafeEqual } from 'node:crypto'
+import { readFile } from 'node:fs/promises'
 import { createServer } from 'node:http'
+
+import { validateBoard } from './board-model.mjs'
 
 const COOKIE_NAME = 'persotodo_session'
 const SESSION_SECONDS = 60 * 60 * 12
-const MAX_BODY_BYTES = 8 * 1024
+const MAX_BODY_BYTES = 2 * 1024 * 1024
+const boardModelSource = await readFile(new URL('./board-model.mjs', import.meta.url), 'utf8')
 
 function json(response, status, body, headers = {}) {
   response.writeHead(status, {
@@ -13,6 +17,16 @@ function json(response, status, body, headers = {}) {
     ...headers
   })
   response.end(JSON.stringify(body))
+}
+
+function attachment(response, filename, body) {
+  response.writeHead(200, {
+    'Cache-Control': 'no-store',
+    'Content-Disposition': `attachment; filename="${filename}"`,
+    'Content-Type': 'application/json; charset=utf-8',
+    'X-Content-Type-Options': 'nosniff'
+  })
+  response.end(JSON.stringify(body, null, 2))
 }
 
 function parseCookies(header = '') {
@@ -116,6 +130,16 @@ export function createApiServer({ repository, pin, sessionSecret, now = Date.now
         return
       }
 
+      if (url.pathname === '/api/persotodo/board-model.js' && request.method === 'GET') {
+        response.writeHead(200, {
+          'Cache-Control': 'no-cache',
+          'Content-Type': 'text/javascript; charset=utf-8',
+          'X-Content-Type-Options': 'nosniff'
+        })
+        response.end(boardModelSource)
+        return
+      }
+
       const cookies = parseCookies(request.headers.cookie)
       const authenticated = validSession(cookies[COOKIE_NAME], sessionSecret, now)
 
@@ -161,6 +185,82 @@ export function createApiServer({ repository, pin, sessionSecret, now = Date.now
 
       if (!authenticated) {
         json(response, 401, { error: 'Authentication required.' })
+        return
+      }
+
+      if (url.pathname === '/api/persotodo/board' && request.method === 'GET') {
+        const result = await repository.loadBoard()
+        if (!result) {
+          json(response, 503, { error: 'The Clearspace board could not be loaded. Check the database before editing.' })
+          return
+        }
+        json(response, 200, result, { ETag: `"${result.revision}"` })
+        return
+      }
+
+      if (url.pathname === '/api/persotodo/board' && request.method === 'PUT') {
+        const match = request.headers['if-match']?.match(/^(?:W\/)?"?(\d+)"?$/)
+        if (!match) {
+          json(response, 428, { error: 'If-Match with the loaded revision is required.' })
+          return
+        }
+        const requestId = request.headers['x-request-id']
+        if (typeof requestId !== 'string' || !/^[A-Za-z0-9-]{8,100}$/.test(requestId)) {
+          json(response, 400, { error: 'A valid X-Request-ID is required.' })
+          return
+        }
+        const body = await readJson(request)
+        const validation = validateBoard(body.board)
+        if (!validation.ok) {
+          json(response, 422, { error: 'Board validation failed.', details: validation.errors.slice(0, 50) })
+          return
+        }
+        const serialized = JSON.stringify(body.board)
+        const result = await repository.saveBoard({
+          board: body.board,
+          expectedRevision: Number(match[1]),
+          requestId,
+          contentHash: createHash('sha256').update(serialized).digest('hex')
+        })
+        if (result.requestConflict) {
+          json(response, 409, { error: 'That save request ID was already used for different content.' })
+          return
+        }
+        if (result.stale) {
+          json(response, 412, { error: 'This board is stale. Reload before making more changes.', revision: result.revision }, { ETag: `"${result.revision}"` })
+          return
+        }
+        json(response, 200, result, { ETag: `"${result.revision}"` })
+        return
+      }
+
+      if (url.pathname === '/api/persotodo/revisions' && request.method === 'GET') {
+        json(response, 200, { revisions: await repository.listRevisions() })
+        return
+      }
+
+      const revisionMatch = url.pathname.match(/^\/api\/persotodo\/revisions\/(\d+)$/)
+      if (revisionMatch && request.method === 'GET') {
+        const revision = await repository.getRevision(Number(revisionMatch[1]))
+        if (!revision) {
+          json(response, 404, { error: 'Saved revision not found.' })
+          return
+        }
+        if (url.searchParams.get('download') === '1') {
+          attachment(response, `clearspace-revision-${revision.revision}.json`, revision.board)
+          return
+        }
+        json(response, 200, revision)
+        return
+      }
+
+      if (url.pathname === '/api/persotodo/export' && request.method === 'GET') {
+        const result = await repository.loadBoard()
+        if (!result) {
+          json(response, 503, { error: 'The Clearspace board could not be loaded.' })
+          return
+        }
+        attachment(response, `clearspace-board-revision-${result.revision}.json`, result.board)
         return
       }
 

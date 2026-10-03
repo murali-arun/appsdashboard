@@ -4,13 +4,26 @@
 
 A clean, ready-to-use web application template built with Vite. Perfect for quickly starting new projects with modern development tools and deployment configurations.
 
-## Persotodo
+## Clearspace
 
-Persotodo is available at `/persotodo/`. It uses a small Node API and a
-dedicated `persotodo` database in the VPS's existing PostgreSQL service. The
-API creates the `persotodo_items` table idempotently on startup. PIN validation
-is server-side through `PERSOTODO_PIN`; production supplies it from the GitHub
-Actions secret of the same name.
+Clearspace is available at `/persotodo/`. It is a calm personal planning system
+with Today, Inbox, Week, Month, Future, Waiting, and configurable Kanban views.
+The browser and API share one board validation model. The complete board is
+saved atomically with optimistic revision checks, while the latest 100 earlier
+revisions remain available for download or deliberate restoration. The existing
+`persotodo` PostgreSQL database remains the storage service. PIN validation is
+server-side through `PERSOTODO_PIN`.
+
+Clearspace never invents estimates, deadlines, or completion state. Empty and
+unknown values remain explicit. Browser Undo keeps the latest 50 actions for the
+current tab and clears on reload; database revisions persist.
+
+JSON Import accepts the current schema, the documented schema-version-1 shape
+(`lanes`, `cards`, `capacity`, and `outcomes`), and older todo arrays or
+`{ "todos": [...] }` exports. Import always validates first and asks before
+replacing the board. A legacy `file://` page's browser localStorage cannot be
+read automatically by this hosted page; export JSON from the old page, then use
+Clearspace's Import JSON action once.
 
 Run the API tests with:
 
