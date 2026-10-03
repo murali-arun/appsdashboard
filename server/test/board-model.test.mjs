@@ -72,3 +72,15 @@ test('hosted UI does not use localStorage', async () => {
   const script = await readFile(new URL('../../public/persotodo/app.js', import.meta.url), 'utf8')
   assert.doesNotMatch(script, /localStorage/)
 })
+
+test('account gate and authenticated Home and Help views are present without the shared PIN', async () => {
+  const html = await readFile(new URL('../../public/persotodo/index.html', import.meta.url), 'utf8')
+  const script = await readFile(new URL('../../public/persotodo/app.js', import.meta.url), 'utf8')
+  assert.match(html, /id="loginForm"/)
+  assert.match(html, /id="createForm"/)
+  assert.match(html, /data-view="home"/)
+  assert.match(html, /data-view="help"/)
+  assert.doesNotMatch(html, /Four-digit PIN|id="pin"/)
+  assert.match(script, /function renderHome\(/)
+  assert.match(script, /function renderHelp\(/)
+})

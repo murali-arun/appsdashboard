@@ -24,9 +24,10 @@ const saveState = $('#saveState')
 const conflictBanner = $('#conflictBanner')
 
 const state = {
+  user: null,
   board: null,
   revision: null,
-  view: 'today',
+  view: 'home',
   selectedDate: localDateKey(),
   monthDate: localDateKey().slice(0, 7),
   search: '',
@@ -97,6 +98,24 @@ function setSaveState(kind, label, retry = false) {
     button.addEventListener('click', () => flushSave())
     saveState.append(button)
   }
+}
+
+function setAuthenticatedUser(user) {
+  state.user = user
+  $('#accountName').textContent = user?.username ?? ''
+}
+
+function showAuthMode(mode) {
+  const creating = mode === 'create'
+  $('#loginForm').hidden = creating
+  $('#createForm').hidden = !creating
+  $('#loginTab').classList.toggle('active', !creating)
+  $('#createTab').classList.toggle('active', creating)
+  $('#loginTab').setAttribute('aria-selected', String(!creating))
+  $('#createTab').setAttribute('aria-selected', String(creating))
+  $('#loginError').textContent = ''
+  $('#createError').textContent = ''
+  ;(creating ? $('#createUsername') : $('#loginUsername')).focus()
 }
 
 async function api(path, options = {}) {
@@ -286,8 +305,61 @@ function viewHeader(title, copy, actions = '') {
 }
 
 function renderView() {
-  const renderers = { today: renderToday, inbox: renderInbox, week: renderWeek, month: renderMonth, future: renderFuture, waiting: renderWaiting, kanban: renderKanban }
+  const renderers = { home: renderHome, today: renderToday, inbox: renderInbox, week: renderWeek, month: renderMonth, future: renderFuture, waiting: renderWaiting, kanban: renderKanban, help: renderHelp }
   renderers[state.view]()
+}
+
+function renderHome() {
+  const today = localDateKey()
+  const todayCards = state.board.cards.filter(card => card.scheduledDate === today)
+  const inbox = state.board.cards.filter(card => card.planningHome === 'Inbox')
+  const inProgress = state.board.cards.filter(card => laneFor(card)?.category === 'inProgress' && !isComplete(card))
+  const waiting = state.board.cards.filter(card => card.waitingOn || laneFor(card)?.category === 'blockers')
+  const completed = state.board.cards.filter(isComplete)
+  const capacity = capacityForDate(state.board, today)
+  const firstRun = state.board.cards.length === 0
+  view.innerHTML = viewHeader(`Welcome, ${state.user?.username ?? 'planner'}`, 'A quiet overview of what deserves attention. Start small; Clearspace will not reward filling every empty hour.') + `
+    <div class="home-stats">
+      <button class="metric-card" data-view="today"><strong>${todayCards.length}</strong><span>planned today</span><small>${capacity.off ? 'Protected day off' : `${formatMinutes(Math.max(0, capacity.remainingMinutes))} remaining`}</small></button>
+      <button class="metric-card" data-view="inbox"><strong>${inbox.length}</strong><span>in Inbox</span><small>Capture now, decide later</small></button>
+      <button class="metric-card" data-view="kanban"><strong>${inProgress.length}</strong><span>in progress</span><small>${waiting.length} waiting or blocked</small></button>
+      <button class="metric-card" data-view="kanban"><strong>${completed.length}</strong><span>completed</span><small>Done and validated</small></button>
+    </div>
+    <div class="home-grid">
+      <section class="panel"><div class="panel-header"><h2>${firstRun ? 'Your first five minutes' : 'A useful planning rhythm'}</h2></div><div class="panel-body step-list">
+        <button data-view="inbox"><span>1</span><div><strong>Capture what is on your mind</strong><small>A title is enough. Do not solve everything while capturing.</small></div></button>
+        <button data-view="today"><span>2</span><div><strong>Choose one main win</strong><small>Schedule it for today and mark it as the main win.</small></div></button>
+        <button data-view="week"><span>3</span><div><strong>Plan against real capacity</strong><small>Add estimates only when you know them; unknown stays unknown.</small></div></button>
+        <button data-view="kanban"><span>4</span><div><strong>Move work as reality changes</strong><small>Workflow status and scheduled dates remain separate decisions.</small></div></button>
+        <button data-view="help"><span>5</span><div><strong>See the complete guide</strong><small>Examples explain cards, waiting work, capacity, revisions, and recovery.</small></div></button>
+      </div></section>
+      <section class="panel"><div class="panel-header"><h2>Good to know</h2></div><div class="panel-body home-notes">
+        <p><strong>Saved automatically.</strong> “Saved to database” appears only after the server confirms your private board.</p>
+        <p><strong>No silent rollover.</strong> Unfinished prior plans appear under Needs a decision.</p>
+        <p><strong>Undo is temporary.</strong> Browser Undo clears on reload; Saved revisions remain available.</p>
+        <button class="button subtle" data-view="help">Open help &amp; examples</button>
+      </div></section>
+    </div>`
+}
+
+function renderHelp() {
+  view.innerHTML = viewHeader('Help & examples', 'A practical path through Clearspace. Examples are instructional only and are never added to your board.') + `
+    <div class="help-layout">
+      <nav class="panel help-index" aria-label="Help topics">
+        <a href="#help-capture">1. Capture</a><a href="#help-plan">2. Plan a day</a><a href="#help-week">3. Schedule a week</a><a href="#help-flow">4. Track workflow</a><a href="#help-waiting">5. Follow up</a><a href="#help-capacity">6. Set capacity</a><a href="#help-recovery">7. Recover work</a>
+      </nav>
+      <div class="help-content">
+        <section id="help-capture" class="panel help-section"><p class="help-number">01</p><h2>Capture without friction</h2><p>Open Inbox, enter only a title, and choose Inbox, Today, or Someday. Use Inbox when the next action or timing is not decided yet.</p><div class="example-box"><strong>Example</strong><span>Title: Renew passport</span><span>Destination: Inbox</span><span>Estimate and deadline: left unknown</span></div><button class="button subtle" data-view="inbox">Go to Inbox</button></section>
+        <section id="help-plan" class="panel help-section"><p class="help-number">02</p><h2>Build a humane day</h2><p>Choose one main win and, gently, up to two supporting priorities. A scheduled date is your plan; a deadline is a real external constraint. They are intentionally separate.</p><div class="example-box"><strong>Example</strong><span>Main win: Draft proposal</span><span>Scheduled: today · Deadline: Friday</span><span>Estimate: 90 minutes · Energy: deep focus</span></div><button class="button subtle" data-view="today">Plan today</button></section>
+        <section id="help-week" class="panel help-section"><p class="help-number">03</p><h2>Schedule the week</h2><p>Drag cards between Monday–Sunday or use each card’s Move control. Rescheduling changes neither its workflow lane nor its deadline. Ready-to-plan work stays visible below the week.</p><div class="example-box"><strong>Example</strong><span>Move “Review contract” from Tuesday to Thursday</span><span>Deadline remains Friday · Lane remains Planned</span></div><button class="button subtle" data-view="week">Open this week</button></section>
+        <section id="help-flow" class="panel help-section"><p class="help-number">04</p><h2>Track workflow honestly</h2><p>Kanban lanes are configurable. Done means implementation is complete; Validated means acceptance criteria and the Definition of Done have been checked. WIP limits warn without blocking movement.</p><div class="example-box"><strong>Useful card detail</strong><span>Next action: Ask Priya for the error log</span><span>Acceptance: Login succeeds on Safari and Chrome</span><span>Lane: Blockers · Priority badge: High</span></div><button class="button subtle" data-view="kanban">Open Kanban</button></section>
+        <section id="help-waiting" class="panel help-section"><p class="help-number">05</p><h2>Make waiting actionable</h2><p>Record who or what you are waiting on, the next unblock action, and an optional follow-up date. Timing notes such as “Monday evening” remain notes—Clearspace does not send timed notifications.</p><div class="example-box"><strong>Example</strong><span>Waiting on: Finance team</span><span>Unblock action: Send the missing invoice number</span><span>Follow up: 2026-10-05 · Timing note: Monday evening</span></div><button class="button subtle" data-view="waiting">Review waiting work</button></section>
+        <section id="help-capacity" class="panel help-section"><p class="help-number">06</p><h2>Protect capacity</h2><p>Weekdays default to eight hours with a 25% buffer: six hours available and two reserved. Unknown estimates are counted separately, completed scheduled work still consumes planned time, and days off are protected.</p><div class="example-box"><strong>Example</strong><span>Available: 6h · Estimated work: 4h 30m</span><span>Remaining: up to 1h 30m · 2 tasks unestimated</span></div><button class="button subtle" id="helpCapacityButton">Open capacity settings</button></section>
+        <section id="help-recovery" class="panel help-section"><p class="help-number">07</p><h2>Undo, export, and recover</h2><p>Undo restores the last 50 actions in this browser tab. Export JSON before bulk edits. Saved revisions let you download or deliberately restore an earlier board; restoring creates a new save.</p><div class="example-box"><strong>Safety sequence</strong><span>Export JSON → make bulk changes → verify → use Saved revisions if needed</span></div><button class="button subtle" id="helpRevisionsButton">Open saved revisions</button></section>
+      </div>
+    </div>`
+  $('#helpCapacityButton').addEventListener('click', openCapacityDialog)
+  $('#helpRevisionsButton').addEventListener('click', openRevisions)
 }
 
 function decisionCards(dateKey) {
@@ -586,11 +658,43 @@ document.addEventListener('submit', event => {
   })
 })
 
-$('#pinForm').addEventListener('submit', async event => {
-  event.preventDefault(); $('#unlock').disabled = true; $('#pinError').textContent = ''
-  try { await api('/session', { method: 'POST', body: JSON.stringify({ pin: $('#pin').value }) }); await loadBoard() }
-  catch (error) { $('#pinError').textContent = error.message; $('#pin').value = ''; $('#pin').focus() }
-  finally { $('#unlock').disabled = false }
+$('#loginTab').addEventListener('click', () => showAuthMode('login'))
+$('#createTab').addEventListener('click', () => showAuthMode('create'))
+
+$('#loginForm').addEventListener('submit', async event => {
+  event.preventDefault()
+  $('#loginButton').disabled = true
+  $('#loginError').textContent = ''
+  try {
+    const { payload } = await api('/session', { method: 'POST', body: JSON.stringify({ username: $('#loginUsername').value, password: $('#loginPassword').value }) })
+    setAuthenticatedUser(payload.user)
+    $('#loginPassword').value = ''
+    await loadBoard()
+  } catch (error) {
+    $('#loginError').textContent = error.message
+    $('#loginPassword').value = ''
+    $('#loginPassword').focus()
+  } finally { $('#loginButton').disabled = false }
+})
+
+$('#createForm').addEventListener('submit', async event => {
+  event.preventDefault()
+  $('#createError').textContent = ''
+  if ($('#createPassword').value !== $('#confirmPassword').value) {
+    $('#createError').textContent = 'Passwords do not match.'
+    $('#confirmPassword').focus()
+    return
+  }
+  $('#createButton').disabled = true
+  try {
+    const { payload } = await api('/users', { method: 'POST', body: JSON.stringify({ username: $('#createUsername').value, password: $('#createPassword').value }) })
+    setAuthenticatedUser(payload.user)
+    $('#createPassword').value = ''
+    $('#confirmPassword').value = ''
+    await loadBoard()
+  } catch (error) {
+    $('#createError').textContent = error.message
+  } finally { $('#createButton').disabled = false }
 })
 
 $('#cardForm').addEventListener('submit', event => {
@@ -686,7 +790,7 @@ document.addEventListener('keydown', event => {
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z' && !editingText) { event.preventDefault(); undo() }
   if (event.key === 'Escape' && state.dragCardId) { state.dragCardId = null; $('#trashBucket').hidden = true }
   if (!editingText && !event.ctrlKey && !event.metaKey && !event.altKey) {
-    const shortcut = { t: 'today', w: 'week', m: 'month', k: 'kanban' }[event.key.toLowerCase()]
+    const shortcut = { h: 'home', t: 'today', w: 'week', m: 'month', k: 'kanban' }[event.key.toLowerCase()]
     if (shortcut) setView(shortcut)
   }
 })
@@ -695,4 +799,9 @@ window.addEventListener('beforeunload', event => {
   if (state.changeVersion > state.savedVersion || state.saveInFlight) { event.preventDefault(); event.returnValue = '' }
 })
 
-api('/session').then(({ payload }) => payload.authenticated ? loadBoard() : null).catch(() => { $('#pinError').textContent = 'Clearspace is temporarily unavailable.' })
+api('/session').then(({ payload }) => {
+  if (payload.authenticated) {
+    setAuthenticatedUser(payload.user)
+    return loadBoard()
+  }
+}).catch(() => { $('#loginError').textContent = 'Clearspace is temporarily unavailable.' })

@@ -16,11 +16,28 @@
       <p class="eyebrow">Private planning space</p>
       <h1 id="gateTitle">Make room for what matters.</h1>
       <p class="lede">Clearspace turns work into calm, deliberate next actions—without pretending every hour is available.</p>
-      <form id="pinForm" class="pin-form">
-        <label for="pin">Four-digit PIN</label>
-        <input id="pin" type="password" inputmode="numeric" pattern="[0-9]{4}" minlength="4" maxlength="4" autocomplete="current-password" required autofocus>
-        <button id="unlock" class="button primary" type="submit">Open Clearspace</button>
-        <p id="pinError" class="form-error" role="alert" aria-live="polite"></p>
+      <div class="auth-switch" role="tablist" aria-label="Account access">
+        <button id="loginTab" class="auth-tab active" type="button" role="tab" aria-selected="true">Sign in</button>
+        <button id="createTab" class="auth-tab" type="button" role="tab" aria-selected="false">Create account</button>
+      </div>
+      <form id="loginForm" class="auth-form">
+        <label for="loginUsername">Username</label>
+        <input id="loginUsername" name="username" autocomplete="username" minlength="3" maxlength="32" required autofocus>
+        <label for="loginPassword">Password</label>
+        <input id="loginPassword" name="password" type="password" autocomplete="current-password" minlength="10" maxlength="128" required>
+        <button id="loginButton" class="button primary" type="submit">Open my Clearspace</button>
+        <p id="loginError" class="form-error" role="alert" aria-live="polite"></p>
+      </form>
+      <form id="createForm" class="auth-form" hidden>
+        <p class="auth-note">Your board, revisions, and saves are private to this account.</p>
+        <label for="createUsername">Choose a username</label>
+        <input id="createUsername" name="username" autocomplete="username" pattern="[A-Za-z0-9][A-Za-z0-9._-]{2,31}" minlength="3" maxlength="32" required>
+        <label for="createPassword">Choose a password</label>
+        <input id="createPassword" name="new-password" type="password" autocomplete="new-password" minlength="10" maxlength="128" required>
+        <label for="confirmPassword">Confirm password</label>
+        <input id="confirmPassword" name="confirm-password" type="password" autocomplete="new-password" minlength="10" maxlength="128" required>
+        <button id="createButton" class="button primary" type="submit">Create my account</button>
+        <p id="createError" class="form-error" role="alert" aria-live="polite"></p>
       </form>
       <a class="quiet-link" href="/">Back to apps</a>
     </div>
@@ -30,20 +47,23 @@
     <aside class="sidebar" aria-label="Clearspace navigation">
       <div class="sidebar-brand"><span class="brand-mark small">C</span><span>Clearspace</span></div>
       <nav id="navigation" class="navigation">
-        <button class="nav-item active" data-view="today"><span>Today</span><kbd>T</kbd></button>
+        <button class="nav-item active" data-view="home"><span>Home</span><kbd>H</kbd></button>
+        <button class="nav-item" data-view="today"><span>Today</span><kbd>T</kbd></button>
         <button class="nav-item" data-view="inbox"><span>Inbox</span><span id="inboxBadge" class="nav-badge">0</span></button>
         <button class="nav-item" data-view="week"><span>This week</span><kbd>W</kbd></button>
         <button class="nav-item" data-view="month"><span>Month</span><kbd>M</kbd></button>
         <button class="nav-item" data-view="future"><span>Future / Someday</span></button>
         <button class="nav-item" data-view="waiting"><span>Waiting</span></button>
         <button class="nav-item" data-view="kanban"><span>Kanban</span><kbd>K</kbd></button>
+        <button class="nav-item" data-view="help"><span>Help &amp; examples</span><span aria-hidden="true">?</span></button>
       </nav>
       <div class="sidebar-bottom">
+        <p class="signed-in">Signed in as <strong id="accountName"></strong></p>
         <button id="capacityButton" class="sidebar-action">Capacity settings</button>
         <button id="revisionsButton" class="sidebar-action">Saved revisions</button>
         <button id="exportButton" class="sidebar-action">Export JSON</button>
         <button id="importButton" class="sidebar-action">Import JSON</button>
-        <button id="logoutButton" class="sidebar-action">Lock Clearspace</button>
+        <button id="logoutButton" class="sidebar-action">Sign out</button>
         <p class="local-note">Database-backed. Browser Undo clears on reload; saved revisions do not.</p>
       </div>
     </aside>

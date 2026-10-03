@@ -57,15 +57,10 @@ jobs:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USERNAME: ${{ secrets.VPS_USERNAME }}
           VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
-          PERSOTODO_PIN: ${{ secrets.PERSOTODO_PIN }}
         run: |
-          for name in VPS_HOST VPS_USERNAME VPS_SSH_KEY PERSOTODO_PIN; do
+          for name in VPS_HOST VPS_USERNAME VPS_SSH_KEY; do
             test -n "${!name}" || { echo "Missing required secret: ${name}"; exit 1; }
           done
-          printf '%s' "$PERSOTODO_PIN" | grep -Eq '^[0-9]{4}$' || {
-            echo "PERSOTODO_PIN must contain exactly four digits"
-            exit 1
-          }
 
       - name: Ensure target directory exists
         uses: appleboy/ssh-action@v1.2.0
@@ -101,15 +96,12 @@ jobs:
 
       - name: Provision database and deploy
         uses: appleboy/ssh-action@v1.2.0
-        env:
-          PERSOTODO_PIN: ${{ secrets.PERSOTODO_PIN }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || 22 }}
           command_timeout: 20m
-          envs: PERSOTODO_PIN
           script: |
             set -eu
             umask 077
@@ -124,9 +116,7 @@ jobs:
             test -n "$DB_ADMIN_USER" && test -n "$DB_ADMIN_PASSWORD" && test -n "$DB_ADMIN_DATABASE"
 
             APP_DB_PASSWORD="$(sed -n 's/^PERSOTODO_DB_PASSWORD=//p' .env 2>/dev/null | head -n 1 || true)"
-            SESSION_SECRET="$(sed -n 's/^PERSOTODO_SESSION_SECRET=//p' .env 2>/dev/null | head -n 1 || true)"
             if [ -z "$APP_DB_PASSWORD" ]; then APP_DB_PASSWORD="$(openssl rand -hex 32)"; fi
-            if [ -z "$SESSION_SECRET" ]; then SESSION_SECRET="$(openssl rand -hex 48)"; fi
 
             docker exec -i \
               -e PGPASSWORD="$DB_ADMIN_PASSWORD" \
@@ -147,8 +137,6 @@ jobs:
 
             cat > .env <<EOF
             DATABASE_URL=postgresql://persotodo:$APP_DB_PASSWORD@litellm_db:5432/persotodo
-            PERSOTODO_PIN=$PERSOTODO_PIN
-            PERSOTODO_SESSION_SECRET=$SESSION_SECRET
             PERSOTODO_DB_PASSWORD=$APP_DB_PASSWORD
             EOF
             chmod 600 .env

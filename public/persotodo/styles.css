@@ -64,8 +64,13 @@ h1 { margin-bottom: 16px; font-family: Georgia, "Times New Roman", serif; font-s
 h2 { margin-bottom: 6px; font-family: Georgia, "Times New Roman", serif; font-size: 1.75rem; font-weight: 500; letter-spacing: -.03em; }
 h3 { margin-bottom: 10px; font-size: 1rem; }
 .lede { margin: 0 auto; color: var(--muted); line-height: 1.65; }
-.pin-form { display: grid; gap: 12px; margin: 30px 0 18px; text-align: left; }
-.pin-form input { padding: 14px; font-size: 1.35rem; letter-spacing: .35em; text-align: center; }
+.auth-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; margin: 28px 0 16px; border-radius: 12px; background: var(--warm-200); }
+.auth-tab { padding: 9px; border: 0; border-radius: 9px; background: transparent; color: var(--muted); font-weight: 750; }
+.auth-tab.active { background: white; color: var(--forest-900); box-shadow: 0 2px 8px rgba(24,44,37,.08); }
+.auth-form { display: grid; gap: 9px; margin: 0 0 18px; text-align: left; }
+.auth-form input { padding: 12px 14px; }
+.auth-form .button { margin-top: 5px; }
+.auth-note { margin: 0 0 4px; color: var(--muted); font-size: .8rem; line-height: 1.45; }
 .quiet-link { color: var(--muted); font-size: .86rem; }
 .form-error { min-height: 1.2rem; margin: 0; color: var(--red); font-size: .85rem; }
 
@@ -81,6 +86,8 @@ h3 { margin-bottom: 10px; font-size: 1rem; }
 .sidebar-bottom { display: grid; gap: 2px; margin-top: auto; padding-top: 24px; }
 .sidebar-action { padding: 8px 10px; border-radius: 8px; font-size: .85rem; }
 .sidebar-action:hover { background: rgba(255,255,255,.08); color: white; }
+.signed-in { margin: 0 10px 10px; color: rgba(255,255,255,.58); font-size: .75rem; }
+.signed-in strong { display: block; margin-top: 2px; color: white; font-size: .84rem; overflow-wrap: anywhere; }
 .local-note { margin: 14px 10px 0; color: rgba(255,255,255,.38); font-size: .72rem; line-height: 1.45; }
 
 .workspace { min-width: 0; }
@@ -117,6 +124,32 @@ h3 { margin-bottom: 10px; font-size: 1rem; }
 .panel-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 17px 18px 12px; }
 .panel-header h2, .panel-header h3 { margin: 0; font-family: inherit; font-size: .98rem; font-weight: 800; letter-spacing: 0; }
 .panel-body { padding: 0 18px 18px; }
+.home-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 20px; }
+.metric-card { display: grid; gap: 3px; padding: 18px; border: 1px solid var(--warm-200); border-radius: 16px; background: var(--warm-50); color: var(--ink); text-align: left; box-shadow: 0 8px 26px rgba(25,47,39,.04); }
+.metric-card:hover { border-color: #b9c9c2; transform: translateY(-1px); }
+.metric-card strong { font-family: Georgia, serif; color: var(--forest-900); font-size: 2rem; font-weight: 500; }
+.metric-card span { font-weight: 800; }
+.metric-card small { color: var(--muted); }
+.home-grid { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(280px, .7fr); gap: 20px; align-items: start; }
+.step-list { display: grid; gap: 8px; }
+.step-list button { display: grid; grid-template-columns: 34px 1fr; gap: 12px; align-items: start; padding: 12px; border: 0; border-radius: 12px; background: white; color: var(--ink); text-align: left; }
+.step-list button:hover { background: var(--forest-100); }
+.step-list button > span { display: grid; width: 30px; height: 30px; place-items: center; border-radius: 9px; background: var(--forest-900); color: white; font-weight: 800; }
+.step-list strong, .step-list small { display: block; }
+.step-list small { margin-top: 3px; color: var(--muted); line-height: 1.4; }
+.home-notes p { padding-bottom: 13px; border-bottom: 1px solid var(--warm-200); color: var(--muted); line-height: 1.55; }
+.home-notes strong { color: var(--ink); }
+.help-layout { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 20px; align-items: start; }
+.help-index { position: sticky; top: 92px; display: grid; padding: 10px; }
+.help-index a { padding: 9px 10px; border-radius: 8px; color: var(--muted); font-size: .84rem; text-decoration: none; }
+.help-index a:hover { background: var(--forest-100); color: var(--forest-900); }
+.help-content { display: grid; gap: 16px; }
+.help-section { padding: 22px; scroll-margin-top: 90px; }
+.help-section h2 { margin-bottom: 10px; }
+.help-section > p:not(.help-number) { color: var(--muted); line-height: 1.65; }
+.help-number { margin-bottom: 6px; color: var(--forest-700); font-size: .72rem; font-weight: 900; letter-spacing: .14em; }
+.example-box { display: grid; gap: 5px; padding: 14px; margin: 14px 0; border-left: 3px solid var(--forest-700); border-radius: 0 10px 10px 0; background: var(--forest-100); font-size: .84rem; }
+.example-box span { color: #40554d; }
 .today-grid { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(280px, .75fr); gap: 20px; align-items: start; }
 .stack { display: grid; gap: 16px; }
 .main-win { padding: 20px; border: 1px solid #bfd4cb; border-radius: 16px; background: #eef5f1; }
@@ -217,6 +250,8 @@ h3 { margin-bottom: 10px; font-size: 1rem; }
   .topbar { flex-wrap: wrap; }
   .search-wrap { max-width: none; }
   .today-grid { grid-template-columns: 1fr; }
+  .home-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .home-grid { grid-template-columns: 1fr; }
   .section-grid { grid-template-columns: 1fr 1fr; }
   .month-day { min-height: 105px; }
 }
@@ -231,6 +266,8 @@ h3 { margin-bottom: 10px; font-size: 1rem; }
   .view { padding-inline: 15px; }
   .view-header { align-items: start; flex-direction: column; }
   .section-grid { grid-template-columns: 1fr; }
+  .help-layout { grid-template-columns: 1fr; }
+  .help-index { position: static; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .capture { grid-template-columns: 1fr; }
   .month-grid { overflow-x: auto; grid-template-columns: repeat(7, minmax(105px, 1fr)); }
   .form-grid { grid-template-columns: 1fr; }
@@ -249,6 +286,8 @@ h3 { margin-bottom: 10px; font-size: 1rem; }
   #newCardButton { order: 1; }
   .save-state { order: 1; min-width: auto; }
   .view-title { font-size: 2.2rem; }
+  .home-stats { grid-template-columns: 1fr; }
+  .help-index { grid-template-columns: 1fr; }
   .date-nav strong { min-width: 110px; font-size: .85rem; }
   .trash-bucket { right: 10px; bottom: 10px; width: calc(100% - 20px); }
 }

@@ -11,8 +11,15 @@ with Today, Inbox, Week, Month, Future, Waiting, and configurable Kanban views.
 The browser and API share one board validation model. The complete board is
 saved atomically with optimistic revision checks, while the latest 100 earlier
 revisions remain available for download or deliberate restoration. The existing
-`persotodo` PostgreSQL database remains the storage service. PIN validation is
-server-side through `PERSOTODO_PIN`.
+`persotodo` PostgreSQL database remains the storage service. Each account has a
+private board, revision history, and replay-safe save history. Passwords are
+hashed with scrypt and login sessions are stored server-side in PostgreSQL.
+
+Create an account from the Clearspace sign-in page. Usernames are unique without
+regard to letter case, and passwords must contain 10–128 characters. After login,
+Home provides a personal overview and Help & examples explains capture, daily and
+weekly planning, workflow, waiting work, capacity, and recovery without adding
+demonstration cards to the user's board.
 
 Clearspace never invents estimates, deadlines, or completion state. Empty and
 unknown values remain explicit. Browser Undo keeps the latest 50 actions for the

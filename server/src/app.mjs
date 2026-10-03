@@ -1,13 +1,23 @@
-import { createHmac, createHash, timingSafeEqual } from 'node:crypto'
+import { createHash } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
 import { createServer } from 'node:http'
 
-import { validateBoard } from './board-model.mjs'
+import {
+  createSessionToken,
+  hashPassword,
+  hashSessionToken,
+  normalizeUsername,
+  validatePassword,
+  validateUsername,
+  verifyPassword
+} from './auth.mjs'
+import { createEmptyBoard, validateBoard } from './board-model.mjs'
 
-const COOKIE_NAME = 'persotodo_session'
+const COOKIE_NAME = 'clearspace_session'
 const SESSION_SECONDS = 60 * 60 * 12
 const MAX_BODY_BYTES = 2 * 1024 * 1024
 const boardModelSource = await readFile(new URL('./board-model.mjs', import.meta.url), 'utf8')
+const dummyPasswordHash = await hashPassword('not-a-real-clearspace-account')
 
 function json(response, status, body, headers = {}) {
   response.writeHead(status, {
@@ -30,46 +40,10 @@ function attachment(response, filename, body) {
 }
 
 function parseCookies(header = '') {
-  return Object.fromEntries(
-    header
-      .split(';')
-      .map(value => value.trim())
-      .filter(Boolean)
-      .map(value => {
-        const separator = value.indexOf('=')
-        return separator === -1
-          ? [value, '']
-          : [value.slice(0, separator), decodeURIComponent(value.slice(separator + 1))]
-      })
-  )
-}
-
-function signature(secret, expiresAt) {
-  return createHmac('sha256', secret)
-    .update(`persotodo:${expiresAt}`)
-    .digest('hex')
-}
-
-function createSession(secret, now) {
-  const expiresAt = now() + SESSION_SECONDS * 1000
-  return `${expiresAt}.${signature(secret, expiresAt)}`
-}
-
-function validSession(token, secret, now) {
-  if (!token) return false
-  const [expiresAtRaw, suppliedSignature, extra] = token.split('.')
-  const expiresAt = Number(expiresAtRaw)
-  if (extra || !Number.isSafeInteger(expiresAt) || expiresAt <= now()) return false
-
-  const expected = Buffer.from(signature(secret, expiresAt))
-  const supplied = Buffer.from(suppliedSignature ?? '')
-  return expected.length === supplied.length && timingSafeEqual(expected, supplied)
-}
-
-function matchingPin(supplied, expected) {
-  const suppliedHash = createHash('sha256').update(String(supplied)).digest()
-  const expectedHash = createHash('sha256').update(expected).digest()
-  return timingSafeEqual(suppliedHash, expectedHash)
+  return Object.fromEntries(header.split(';').map(value => value.trim()).filter(Boolean).map(value => {
+    const separator = value.indexOf('=')
+    return separator === -1 ? [value, ''] : [value.slice(0, separator), decodeURIComponent(value.slice(separator + 1))]
+  }))
 }
 
 async function readJson(request) {
@@ -78,7 +52,6 @@ async function readJson(request) {
     error.status = 415
     throw error
   }
-
   let size = 0
   const chunks = []
   for await (const chunk of request) {
@@ -90,7 +63,6 @@ async function readJson(request) {
     }
     chunks.push(chunk)
   }
-
   try {
     return JSON.parse(Buffer.concat(chunks).toString('utf8'))
   } catch {
@@ -100,225 +72,174 @@ async function readJson(request) {
   }
 }
 
-function normalizeTitle(value) {
-  if (typeof value !== 'string') return null
-  const title = value.trim()
-  return title.length > 0 && title.length <= 500 ? title : null
-}
-
 function clientAddress(request) {
-  return request.headers['x-forwarded-for']?.split(',')[0]?.trim()
-    ?? request.socket.remoteAddress
-    ?? 'unknown'
+  return request.headers['x-forwarded-for']?.split(',')[0]?.trim() ?? request.socket.remoteAddress ?? 'unknown'
 }
 
-export function createApiServer({ repository, pin, sessionSecret, now = Date.now }) {
+function publicUser(user) {
+  return { id: user.id, username: user.username }
+}
+
+function sessionCookie(token) {
+  return `${COOKIE_NAME}=${encodeURIComponent(token)}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${SESSION_SECONDS}`
+}
+
+function clearSessionCookie() {
+  return `${COOKIE_NAME}=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0`
+}
+
+function rateLimited(records, key, now, limit, windowMs) {
+  const cutoff = now - windowMs
+  const record = records.get(key)
+  const count = record?.since > cutoff ? record.count : 0
+  return { blocked: count >= limit, fail: () => records.set(key, { count: count + 1, since: record?.since > cutoff ? record.since : now }), clear: () => records.delete(key) }
+}
+
+export function createApiServer({ repository, now = Date.now }) {
   const failedLogins = new Map()
+  const registrations = new Map()
 
   return createServer(async (request, response) => {
     const url = new URL(request.url, 'http://localhost')
-
     try {
       if (request.method === 'GET' && url.pathname === '/healthz') {
         await repository.health()
         json(response, 200, { status: 'ok' })
         return
       }
-
       if (!url.pathname.startsWith('/api/persotodo/')) {
         json(response, 404, { error: 'Not found.' })
         return
       }
-
       if (url.pathname === '/api/persotodo/board-model.js' && request.method === 'GET') {
-        response.writeHead(200, {
-          'Cache-Control': 'no-cache',
-          'Content-Type': 'text/javascript; charset=utf-8',
-          'X-Content-Type-Options': 'nosniff'
-        })
+        response.writeHead(200, { 'Cache-Control': 'no-cache', 'Content-Type': 'text/javascript; charset=utf-8', 'X-Content-Type-Options': 'nosniff' })
         response.end(boardModelSource)
         return
       }
 
       const cookies = parseCookies(request.headers.cookie)
-      const authenticated = validSession(cookies[COOKIE_NAME], sessionSecret, now)
+      const rawToken = cookies[COOKIE_NAME]
+      const user = rawToken ? await repository.getSession(hashSessionToken(rawToken), new Date(now())) : null
 
       if (url.pathname === '/api/persotodo/session' && request.method === 'GET') {
-        json(response, 200, { authenticated })
+        json(response, 200, { authenticated: Boolean(user), user: user ? publicUser(user) : null })
+        return
+      }
+
+      if (url.pathname === '/api/persotodo/users' && request.method === 'POST') {
+        const limiter = rateLimited(registrations, clientAddress(request), now(), 10, 60 * 60 * 1000)
+        if (limiter.blocked) {
+          json(response, 429, { error: 'Too many account creation attempts. Try again later.' })
+          return
+        }
+        const body = await readJson(request)
+        const usernameResult = validateUsername(body.username)
+        const passwordResult = validatePassword(body.password)
+        if (!usernameResult.ok) { limiter.fail(); json(response, 400, { error: usernameResult.error }); return }
+        if (!passwordResult.ok) { limiter.fail(); json(response, 400, { error: passwordResult.error }); return }
+
+        const created = await repository.createUser({
+          username: usernameResult.username,
+          normalizedUsername: usernameResult.normalizedUsername,
+          passwordHash: await hashPassword(body.password),
+          initialBoard: createEmptyBoard()
+        })
+        if (created.conflict) {
+          limiter.fail()
+          json(response, 409, { error: 'That username is already in use.' })
+          return
+        }
+        limiter.clear()
+        const token = createSessionToken()
+        await repository.createSession(created.user.id, hashSessionToken(token), new Date(now() + SESSION_SECONDS * 1000))
+        json(response, 201, { authenticated: true, user: publicUser(created.user) }, { 'Set-Cookie': sessionCookie(token) })
         return
       }
 
       if (url.pathname === '/api/persotodo/session' && request.method === 'POST') {
-        const address = clientAddress(request)
-        const record = failedLogins.get(address)
-        const windowStart = now() - 15 * 60 * 1000
-        const recentFailures = record?.since > windowStart ? record.count : 0
-        if (recentFailures >= 5) {
+        const body = await readJson(request)
+        const normalizedUsername = normalizeUsername(body.username)
+        const limiter = rateLimited(failedLogins, `${clientAddress(request)}:${normalizedUsername}`, now(), 5, 15 * 60 * 1000)
+        if (limiter.blocked) {
           json(response, 429, { error: 'Too many attempts. Try again later.' })
           return
         }
-
-        const body = await readJson(request)
-        if (!matchingPin(body.pin ?? '', pin)) {
-          failedLogins.set(address, {
-            count: recentFailures + 1,
-            since: record?.since > windowStart ? record.since : now()
-          })
-          json(response, 401, { error: 'Incorrect PIN.' })
+        const account = await repository.findUserByUsername(normalizedUsername)
+        const passwordMatches = await verifyPassword(body.password ?? '', account?.password_hash ?? dummyPasswordHash)
+        if (!account || !passwordMatches) {
+          limiter.fail()
+          json(response, 401, { error: 'Incorrect username or password.' })
           return
         }
-
-        failedLogins.delete(address)
-        const token = createSession(sessionSecret, now)
-        json(response, 200, { authenticated: true }, {
-          'Set-Cookie': `${COOKIE_NAME}=${encodeURIComponent(token)}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${SESSION_SECONDS}`
-        })
+        limiter.clear()
+        const token = createSessionToken()
+        await repository.createSession(account.id, hashSessionToken(token), new Date(now() + SESSION_SECONDS * 1000))
+        json(response, 200, { authenticated: true, user: publicUser(account) }, { 'Set-Cookie': sessionCookie(token) })
         return
       }
 
       if (url.pathname === '/api/persotodo/session' && request.method === 'DELETE') {
-        json(response, 200, { authenticated: false }, {
-          'Set-Cookie': `${COOKIE_NAME}=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0`
-        })
+        if (rawToken) await repository.deleteSession(hashSessionToken(rawToken))
+        json(response, 200, { authenticated: false }, { 'Set-Cookie': clearSessionCookie() })
         return
       }
 
-      if (!authenticated) {
+      if (!user) {
         json(response, 401, { error: 'Authentication required.' })
         return
       }
 
       if (url.pathname === '/api/persotodo/board' && request.method === 'GET') {
-        const result = await repository.loadBoard()
-        if (!result) {
-          json(response, 503, { error: 'The Clearspace board could not be loaded. Check the database before editing.' })
-          return
-        }
+        const result = await repository.loadBoard(user.id)
+        if (!result) { json(response, 503, { error: 'Your Clearspace board could not be loaded. Check the database before editing.' }); return }
         json(response, 200, result, { ETag: `"${result.revision}"` })
         return
       }
 
       if (url.pathname === '/api/persotodo/board' && request.method === 'PUT') {
         const match = request.headers['if-match']?.match(/^(?:W\/)?"?(\d+)"?$/)
-        if (!match) {
-          json(response, 428, { error: 'If-Match with the loaded revision is required.' })
-          return
-        }
+        if (!match) { json(response, 428, { error: 'If-Match with the loaded revision is required.' }); return }
         const requestId = request.headers['x-request-id']
-        if (typeof requestId !== 'string' || !/^[A-Za-z0-9-]{8,100}$/.test(requestId)) {
-          json(response, 400, { error: 'A valid X-Request-ID is required.' })
-          return
-        }
+        if (typeof requestId !== 'string' || !/^[A-Za-z0-9-]{8,100}$/.test(requestId)) { json(response, 400, { error: 'A valid X-Request-ID is required.' }); return }
         const body = await readJson(request)
         const validation = validateBoard(body.board)
-        if (!validation.ok) {
-          json(response, 422, { error: 'Board validation failed.', details: validation.errors.slice(0, 50) })
-          return
-        }
-        const serialized = JSON.stringify(body.board)
+        if (!validation.ok) { json(response, 422, { error: 'Board validation failed.', details: validation.errors.slice(0, 50) }); return }
         const result = await repository.saveBoard({
+          userId: user.id,
           board: body.board,
           expectedRevision: Number(match[1]),
           requestId,
-          contentHash: createHash('sha256').update(serialized).digest('hex')
+          contentHash: createHash('sha256').update(JSON.stringify(body.board)).digest('hex')
         })
-        if (result.requestConflict) {
-          json(response, 409, { error: 'That save request ID was already used for different content.' })
-          return
-        }
-        if (result.stale) {
-          json(response, 412, { error: 'This board is stale. Reload before making more changes.', revision: result.revision }, { ETag: `"${result.revision}"` })
-          return
-        }
+        if (result.requestConflict) { json(response, 409, { error: 'That save request ID was already used for different content.' }); return }
+        if (result.stale) { json(response, 412, { error: 'This board is stale. Reload before making more changes.', revision: result.revision }, { ETag: `"${result.revision}"` }); return }
         json(response, 200, result, { ETag: `"${result.revision}"` })
         return
       }
 
       if (url.pathname === '/api/persotodo/revisions' && request.method === 'GET') {
-        json(response, 200, { revisions: await repository.listRevisions() })
+        json(response, 200, { revisions: await repository.listRevisions(user.id) })
         return
       }
-
       const revisionMatch = url.pathname.match(/^\/api\/persotodo\/revisions\/(\d+)$/)
       if (revisionMatch && request.method === 'GET') {
-        const revision = await repository.getRevision(Number(revisionMatch[1]))
-        if (!revision) {
-          json(response, 404, { error: 'Saved revision not found.' })
-          return
-        }
-        if (url.searchParams.get('download') === '1') {
-          attachment(response, `clearspace-revision-${revision.revision}.json`, revision.board)
-          return
-        }
+        const revision = await repository.getRevision(user.id, Number(revisionMatch[1]))
+        if (!revision) { json(response, 404, { error: 'Saved revision not found.' }); return }
+        if (url.searchParams.get('download') === '1') { attachment(response, `clearspace-revision-${revision.revision}.json`, revision.board); return }
         json(response, 200, revision)
         return
       }
-
       if (url.pathname === '/api/persotodo/export' && request.method === 'GET') {
-        const result = await repository.loadBoard()
-        if (!result) {
-          json(response, 503, { error: 'The Clearspace board could not be loaded.' })
-          return
-        }
+        const result = await repository.loadBoard(user.id)
+        if (!result) { json(response, 503, { error: 'Your Clearspace board could not be loaded.' }); return }
         attachment(response, `clearspace-board-revision-${result.revision}.json`, result.board)
-        return
-      }
-
-      if (url.pathname === '/api/persotodo/todos' && request.method === 'GET') {
-        json(response, 200, { todos: await repository.list() })
-        return
-      }
-
-      if (url.pathname === '/api/persotodo/todos' && request.method === 'POST') {
-        const body = await readJson(request)
-        const title = normalizeTitle(body.title)
-        if (!title) {
-          json(response, 400, { error: 'Title must contain 1 to 500 characters.' })
-          return
-        }
-        json(response, 201, { todo: await repository.create(title) })
-        return
-      }
-
-      const match = url.pathname.match(/^\/api\/persotodo\/todos\/(\d+)$/)
-      if (match && request.method === 'PATCH') {
-        const body = await readJson(request)
-        const changes = {}
-        if (Object.hasOwn(body, 'title')) {
-          const title = normalizeTitle(body.title)
-          if (!title) {
-            json(response, 400, { error: 'Title must contain 1 to 500 characters.' })
-            return
-          }
-          changes.title = title
-        }
-        if (Object.hasOwn(body, 'completed')) {
-          if (typeof body.completed !== 'boolean') {
-            json(response, 400, { error: 'Completed must be true or false.' })
-            return
-          }
-          changes.completed = body.completed
-        }
-        if (Object.keys(changes).length === 0) {
-          json(response, 400, { error: 'No supported changes were supplied.' })
-          return
-        }
-
-        const todo = await repository.update(match[1], changes)
-        json(response, todo ? 200 : 404, todo ? { todo } : { error: 'Todo not found.' })
-        return
-      }
-
-      if (match && request.method === 'DELETE') {
-        const removed = await repository.remove(match[1])
-        json(response, removed ? 200 : 404, removed ? { deleted: true } : { error: 'Todo not found.' })
         return
       }
 
       json(response, 404, { error: 'Not found.' })
     } catch (error) {
       const status = Number.isInteger(error.status) ? error.status : 500
-      if (status === 500) console.error('Persotodo request failed:', error)
+      if (status === 500) console.error('Clearspace request failed:', error)
       json(response, status, { error: status === 500 ? 'Unexpected server error.' : error.message })
     }
   })

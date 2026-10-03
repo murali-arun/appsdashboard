@@ -3,62 +3,73 @@ import { once } from 'node:events'
 import { after, before, test } from 'node:test'
 
 import { createApiServer } from '../src/app.mjs'
-import { createCard, createEmptyBoard } from '../src/board-model.mjs'
+import { createCard } from '../src/board-model.mjs'
 
-const todos = []
-let nextId = 1
-let boardState = { revision: 1, board: createEmptyBoard(), updatedAt: new Date() }
-const revisions = []
+const usersByName = new Map()
+const usersById = new Map()
+const sessions = new Map()
+const boards = new Map()
+const revisions = new Map()
 const saveRequests = new Map()
+let nextUserId = 1
+
 const repository = {
   async health() {},
-  async list() { return [...todos] },
-  async create(title) {
-    const todo = { id: String(nextId++), title, completed: false }
-    todos.unshift(todo)
-    return todo
+  async createUser({ username, normalizedUsername, passwordHash, initialBoard }) {
+    if (usersByName.has(normalizedUsername)) return { conflict: true }
+    const user = { id: `user-${nextUserId++}`, username, password_hash: passwordHash }
+    usersByName.set(normalizedUsername, user)
+    usersById.set(user.id, user)
+    boards.set(user.id, { revision: 1, board: structuredClone(initialBoard), updatedAt: new Date() })
+    revisions.set(user.id, [])
+    return { user }
   },
-  async update(id, changes) {
-    const todo = todos.find(item => item.id === id)
-    if (!todo) return null
-    Object.assign(todo, changes)
-    return todo
+  async findUserByUsername(normalizedUsername) { return usersByName.get(normalizedUsername) ?? null },
+  async createSession(userId, tokenHash, expiresAt) { sessions.set(tokenHash, { userId, expiresAt }) },
+  async getSession(tokenHash, at) {
+    const session = sessions.get(tokenHash)
+    if (!session || session.expiresAt <= at) return null
+    return usersById.get(session.userId) ?? null
   },
-  async remove(id) {
-    const index = todos.findIndex(item => item.id === id)
-    if (index === -1) return false
-    todos.splice(index, 1)
-    return true
-  },
-  async loadBoard() { return structuredClone(boardState) },
-  async saveBoard({ board, expectedRevision, requestId, contentHash }) {
-    if (saveRequests.has(requestId)) {
-      const saved = saveRequests.get(requestId)
+  async deleteSession(tokenHash) { sessions.delete(tokenHash) },
+  async loadBoard(userId) { return boards.has(userId) ? structuredClone(boards.get(userId)) : null },
+  async saveBoard({ userId, board, expectedRevision, requestId, contentHash }) {
+    const requestKey = `${userId}:${requestId}`
+    if (saveRequests.has(requestKey)) {
+      const saved = saveRequests.get(requestKey)
       return saved.contentHash === contentHash ? { revision: saved.revision, replayed: true } : { requestConflict: true }
     }
-    if (expectedRevision !== boardState.revision) return { stale: true, revision: boardState.revision }
-    revisions.unshift({ revision: boardState.revision, board: structuredClone(boardState.board), savedAt: new Date() })
-    boardState = { revision: boardState.revision + 1, board: structuredClone(board), updatedAt: new Date() }
-    saveRequests.set(requestId, { contentHash, revision: boardState.revision })
-    return { revision: boardState.revision, replayed: false }
+    const state = boards.get(userId)
+    if (expectedRevision !== state.revision) return { stale: true, revision: state.revision }
+    revisions.get(userId).unshift({ revision: state.revision, board: structuredClone(state.board), savedAt: new Date() })
+    const next = { revision: state.revision + 1, board: structuredClone(board), updatedAt: new Date() }
+    boards.set(userId, next)
+    saveRequests.set(requestKey, { contentHash, revision: next.revision })
+    return { revision: next.revision, replayed: false }
   },
-  async listRevisions() {
-    return revisions.map(item => ({ revision: item.revision, savedAt: item.savedAt, cardCount: item.board.cards.length }))
+  async listRevisions(userId) {
+    return revisions.get(userId).map(item => ({ revision: item.revision, savedAt: item.savedAt, cardCount: item.board.cards.length }))
   },
-  async getRevision(revision) {
-    return revisions.find(item => item.revision === revision) ?? null
-  }
+  async getRevision(userId, revision) { return revisions.get(userId).find(item => item.revision === revision) ?? null }
 }
 
-const server = createApiServer({
-  repository,
-  pin: '8787',
-  sessionSecret: 'test-session-secret-that-is-long-enough',
-  now: () => 1_800_000_000_000
-})
-
+const now = () => 1_800_000_000_000
+const server = createApiServer({ repository, now })
 let baseUrl
-let cookie
+let aliceCookie
+let bobCookie
+
+async function register(username, password) {
+  return fetch(`${baseUrl}/api/persotodo/users`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password })
+  })
+}
+
+async function login(username, password) {
+  return fetch(`${baseUrl}/api/persotodo/session`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password })
+  })
+}
 
 before(async () => {
   server.listen(0, '127.0.0.1')
@@ -71,103 +82,92 @@ after(async () => {
   await once(server, 'close')
 })
 
-test('health endpoint is public', async () => {
-  const response = await fetch(`${baseUrl}/healthz`)
-  assert.equal(response.status, 200)
+test('health and session status are public while boards require authentication', async () => {
+  assert.equal((await fetch(`${baseUrl}/healthz`)).status, 200)
+  const session = await fetch(`${baseUrl}/api/persotodo/session`)
+  assert.deepEqual(await session.json(), { authenticated: false, user: null })
+  assert.equal((await fetch(`${baseUrl}/api/persotodo/board`)).status, 401)
 })
 
-test('todo list requires authentication', async () => {
-  const response = await fetch(`${baseUrl}/api/persotodo/todos`)
-  assert.equal(response.status, 401)
+test('account creation validates credentials and prevents case-insensitive duplicates', async () => {
+  const weak = await register('ab', 'short')
+  assert.equal(weak.status, 400)
+
+  const alice = await register('Alice.Plans', 'correct horse battery staple')
+  assert.equal(alice.status, 201)
+  aliceCookie = alice.headers.get('set-cookie').split(';')[0]
+  assert.match(alice.headers.get('set-cookie'), /HttpOnly; Secure; SameSite=Strict/)
+  assert.deepEqual((await alice.json()).user.username, 'Alice.Plans')
+
+  const duplicate = await register('alice.plans', 'another long password')
+  assert.equal(duplicate.status, 409)
+
+  const bob = await register('Bob', 'bob has a safe password')
+  assert.equal(bob.status, 201)
+  bobCookie = bob.headers.get('set-cookie').split(';')[0]
 })
 
-test('incorrect PIN is rejected', async () => {
-  const response = await fetch(`${baseUrl}/api/persotodo/session`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ pin: '1111' })
-  })
-  assert.equal(response.status, 401)
+test('password login is verified and logout invalidates the server-side session', async () => {
+  assert.equal((await login('Alice.Plans', 'wrong password value')).status, 401)
+  const loggedIn = await login('alice.plans', 'correct horse battery staple')
+  assert.equal(loggedIn.status, 200)
+  const temporaryCookie = loggedIn.headers.get('set-cookie').split(';')[0]
+  const active = await fetch(`${baseUrl}/api/persotodo/session`, { headers: { Cookie: temporaryCookie } })
+  assert.equal((await active.json()).user.username, 'Alice.Plans')
+  const loggedOut = await fetch(`${baseUrl}/api/persotodo/session`, { method: 'DELETE', headers: { Cookie: temporaryCookie } })
+  assert.equal(loggedOut.status, 200)
+  assert.equal((await fetch(`${baseUrl}/api/persotodo/board`, { headers: { Cookie: temporaryCookie } })).status, 401)
 })
 
-test('correct PIN starts a secure session', async () => {
-  const response = await fetch(`${baseUrl}/api/persotodo/session`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ pin: '8787' })
-  })
-  assert.equal(response.status, 200)
-  cookie = response.headers.get('set-cookie').split(';')[0]
-  assert.match(response.headers.get('set-cookie'), /HttpOnly; Secure; SameSite=Strict/)
-})
-
-test('authenticated client can create, update, and remove a todo', async () => {
-  const created = await fetch(`${baseUrl}/api/persotodo/todos`, {
-    method: 'POST',
-    headers: { Cookie: cookie, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title: '  First task  ' })
-  })
-  assert.equal(created.status, 201)
-  const { todo } = await created.json()
-  assert.equal(todo.title, 'First task')
-
-  const updated = await fetch(`${baseUrl}/api/persotodo/todos/${todo.id}`, {
-    method: 'PATCH',
-    headers: { Cookie: cookie, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ completed: true })
-  })
-  assert.equal(updated.status, 200)
-  assert.equal((await updated.json()).todo.completed, true)
-
-  const listed = await fetch(`${baseUrl}/api/persotodo/todos`, {
-    headers: { Cookie: cookie }
-  })
-  assert.equal(listed.status, 200)
-  assert.equal((await listed.json()).todos.length, 1)
-
-  const removed = await fetch(`${baseUrl}/api/persotodo/todos/${todo.id}`, {
-    method: 'DELETE',
-    headers: { Cookie: cookie }
-  })
-  assert.equal(removed.status, 200)
-})
-
-test('board API uses ETags, rejects stale saves, and safely replays a lost response', async () => {
-  const loaded = await fetch(`${baseUrl}/api/persotodo/board`, { headers: { Cookie: cookie } })
-  assert.equal(loaded.status, 200)
-  assert.equal(loaded.headers.get('etag'), '"1"')
-  const { board } = await loaded.json()
-  board.cards.push(createCard(board, { title: 'Revision checked task' }))
-
-  const headers = { Cookie: cookie, 'Content-Type': 'application/json', 'If-Match': '"1"', 'X-Request-ID': 'request-0001' }
-  const saved = await fetch(`${baseUrl}/api/persotodo/board`, { method: 'PUT', headers, body: JSON.stringify({ board }) })
+test('boards, save request IDs, revisions, and exports are isolated per user', async () => {
+  const aliceLoaded = await fetch(`${baseUrl}/api/persotodo/board`, { headers: { Cookie: aliceCookie } })
+  const aliceState = await aliceLoaded.json()
+  aliceState.board.cards.push(createCard(aliceState.board, { title: 'Alice private task' }))
+  const headers = { Cookie: aliceCookie, 'Content-Type': 'application/json', 'If-Match': '"1"', 'X-Request-ID': 'shared-request-0001' }
+  const saved = await fetch(`${baseUrl}/api/persotodo/board`, { method: 'PUT', headers, body: JSON.stringify({ board: aliceState.board }) })
   assert.equal(saved.status, 200)
   assert.equal((await saved.json()).revision, 2)
 
-  const replayed = await fetch(`${baseUrl}/api/persotodo/board`, { method: 'PUT', headers, body: JSON.stringify({ board }) })
-  assert.equal(replayed.status, 200)
-  assert.equal((await replayed.json()).replayed, true)
+  const replay = await fetch(`${baseUrl}/api/persotodo/board`, { method: 'PUT', headers, body: JSON.stringify({ board: aliceState.board }) })
+  assert.equal((await replay.json()).replayed, true)
 
-  const staleBoard = structuredClone(board)
-  staleBoard.meta.updatedAt = new Date().toISOString()
-  const stale = await fetch(`${baseUrl}/api/persotodo/board`, {
+  const bobLoaded = await fetch(`${baseUrl}/api/persotodo/board`, { headers: { Cookie: bobCookie } })
+  const bobState = await bobLoaded.json()
+  assert.equal(bobState.board.cards.length, 0)
+  assert.equal(bobState.revision, 1)
+  const bobSave = await fetch(`${baseUrl}/api/persotodo/board`, {
     method: 'PUT',
-    headers: { Cookie: cookie, 'Content-Type': 'application/json', 'If-Match': '"1"', 'X-Request-ID': 'request-0002' },
-    body: JSON.stringify({ board: staleBoard })
+    headers: { Cookie: bobCookie, 'Content-Type': 'application/json', 'If-Match': '"1"', 'X-Request-ID': 'shared-request-0001' },
+    body: JSON.stringify({ board: bobState.board })
   })
-  assert.equal(stale.status, 412)
+  assert.equal(bobSave.status, 200, 'the same request ID is valid in a different user scope')
+
+  const aliceHistory = await fetch(`${baseUrl}/api/persotodo/revisions`, { headers: { Cookie: aliceCookie } })
+  const bobHistory = await fetch(`${baseUrl}/api/persotodo/revisions`, { headers: { Cookie: bobCookie } })
+  assert.equal((await aliceHistory.json()).revisions.length, 1)
+  assert.equal((await bobHistory.json()).revisions.length, 1)
+
+  const aliceExport = await fetch(`${baseUrl}/api/persotodo/export`, { headers: { Cookie: aliceCookie } })
+  const bobExport = await fetch(`${baseUrl}/api/persotodo/export`, { headers: { Cookie: bobCookie } })
+  assert.equal((await aliceExport.json()).cards[0].title, 'Alice private task')
+  assert.equal((await bobExport.json()).cards.length, 0)
 })
 
-test('board API rejects invalid boards and exposes saved revisions', async () => {
-  const invalid = structuredClone(boardState.board)
-  invalid.cards[0].title = ''
-  const rejected = await fetch(`${baseUrl}/api/persotodo/board`, {
+test('stale and invalid board saves are rejected inside the authenticated user scope', async () => {
+  const loaded = await fetch(`${baseUrl}/api/persotodo/board`, { headers: { Cookie: aliceCookie } })
+  const { board } = await loaded.json()
+  const stale = await fetch(`${baseUrl}/api/persotodo/board`, {
     method: 'PUT',
-    headers: { Cookie: cookie, 'Content-Type': 'application/json', 'If-Match': '"2"', 'X-Request-ID': 'request-0003' },
-    body: JSON.stringify({ board: invalid })
+    headers: { Cookie: aliceCookie, 'Content-Type': 'application/json', 'If-Match': '"1"', 'X-Request-ID': 'stale-request-0002' },
+    body: JSON.stringify({ board })
   })
-  assert.equal(rejected.status, 422)
-  const history = await fetch(`${baseUrl}/api/persotodo/revisions`, { headers: { Cookie: cookie } })
-  assert.equal(history.status, 200)
-  assert.equal((await history.json()).revisions[0].revision, 1)
+  assert.equal(stale.status, 412)
+
+  board.cards[0].title = ''
+  const invalid = await fetch(`${baseUrl}/api/persotodo/board`, {
+    method: 'PUT',
+    headers: { Cookie: aliceCookie, 'Content-Type': 'application/json', 'If-Match': '"2"', 'X-Request-ID': 'invalid-request-03' },
+    body: JSON.stringify({ board })
+  })
+  assert.equal(invalid.status, 422)
 })
